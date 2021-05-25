@@ -1,5 +1,8 @@
 <template>
-    <div class="region" :class="{selected: selected}">
+    <div class="region" :class="{
+        selected: selected,
+        dragndrop: dragndrop
+    }">
     </div>
 </template>
 
@@ -11,6 +14,7 @@ export default {
     props: {
         data: { type: Object, required: true },
         selected: { type: Boolean, default: false },
+        dragndrop: { type: Boolean, default: false },
         editing: { type: Boolean, default: false },
     },
 

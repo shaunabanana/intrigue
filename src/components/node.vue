@@ -3,16 +3,21 @@
         :id="id"
         :class="{
             selected: selected,
-            noselect: !editing
+            noselect: !editing,
+            top: position === 'top'
         }"
         :style="{
             transform: 'translate(' + x + 'px, ' + y + 'px)',
-            width: w + 'px'
+            width: w + 'px',
+            'z-index': dragged ? '99999': 'auto',
+            'pointer-events': (dragged && !editing) ? 'none' : 'all'
         }"
         @click="click"
         @dblclick="dblclick"
         @mousedown="mousedown"
-        @mouseup="mouseup">
+        @mouseup="mouseup"
+        @mouseenter="mouseenter"
+        @mouseleave="mouseleave">
 
         <!-- <div class="handle left"
             v-if="selected">
@@ -21,7 +26,10 @@
         <note v-if="type === 'note'" 
             :data="data" 
             :selected="selected" 
+            :dragndrop="dragndrop" 
             :editing="editing"
+            :position="position"
+            @update-note="updateNote"
             @is-literature="switchToLiterature"
             @is-empty="deleteSelf">
         </note>
@@ -29,18 +37,21 @@
         <literature v-if="type === 'literature'" 
             :data="data" 
             :selected="selected" 
+            :dragndrop="dragndrop" 
             :editing="editing"
+            :position="position"
             @update-citation="updateCitation">
         </literature>
 
         <region v-if="type === 'region'" 
             :data="data" 
             :selected="selected" 
+            :dragndrop="dragndrop" 
             :editing="editing">
         </region>
 
         <div class="handle right"
-            v-if="selected"
+            v-if="selected && (position === 'none' || position === 'top')"
             @mousedown="handleMousedown"
             @mouseup="handleMouseup">
         </div>
@@ -65,15 +76,21 @@ export default {
         x: { type: Number, default: 0 },
         y: { type: Number, default: 0 },
         w: { type: Number, default: 70 },
-        h: { type: Number, default: 30 },
         data: { type: Object, required: true },
+        snap: { type: Array, required: true },
+        snapped: { required: true },
         selected: { type: Boolean, default: false },
+        pressed: { type: Boolean, default: false },
+        dragging: { type: Boolean, default: false },
+        dragged: { type: Boolean, default: false },
         editing: { type: Boolean, default: false },
     },
 
     data () {
         return {
-            handlePressed: false
+            handlePressed: false,
+            dragndrop: false,
+            lastHeight: 0,
         }
     },
 
@@ -90,11 +107,26 @@ export default {
 
         mousedown (e) {
             this.$emit("node-mousedown", this.id, e);
+            this.$el.style.zIndex = "99999";
             e.stopPropagation();
         },
 
         mouseup (e) {
             this.$emit("node-mouseup", e);
+            e.stopPropagation();
+        },
+
+        mouseenter (e) {
+            if (!this.dragged && this.dragging) {
+                this.$emit("drag-enter", this.id);
+                this.dragndrop = true;
+            }
+            e.stopPropagation();
+        },
+
+        mouseleave (e) {
+            this.$emit("drag-leave", this.id);
+            this.dragndrop = false;
             e.stopPropagation();
         },
 
@@ -116,22 +148,43 @@ export default {
             this.$emit('update-citation', this.id, data);
         },
 
+        updateNote (data) {
+            this.$emit('update-note', this.id, data);
+        },
+
         deleteSelf () {
             this.$emit('delete-node', this.id);
         }
     },
 
     mounted() {
-        
+        this.lastHeight = this.$el.offsetHeight;
+        let obs = new ResizeObserver(() => {
+            if ( this.lastHeight !== this.$el.offsetHeight ) {
+                this.$emit('height-changed', this.id);
+                this.lastHeight = this.$el.offsetHeight;
+            }
+        });
+        obs.observe(this.$el);
     },
 
-    watch: {
-        
-    },
-
-    beforeDestroy() {
-        
-    },
+    computed: {
+        position () {
+            if (this.snapped) {
+                if (this.snap.length > 0) {
+                    return 'middle';
+                } else {
+                    return 'bottom';
+                }
+            } else {
+                if (this.snap.length > 0) {
+                    return 'top';
+                } else {
+                    return 'none';
+                }
+            }
+        }
+    }
 };
 </script>
 
@@ -153,10 +206,16 @@ export default {
 
 .handle {
     position: absolute;
-    height: 100%;
-    top: 0px;
-    width: 0.5rem;
+    height: calc(100% - 4px);
+    top: 2px;
+    width: 1rem;
+    border-radius: 0 1rem 1rem 0;
+    background: rgba(128, 99, 4, 0.2);
     cursor: col-resize;
+}
+
+.top .handle {
+    border-radius: 0 1rem 0 0;
 }
 
 .left {
@@ -164,6 +223,6 @@ export default {
 }
 
 .right {
-    right: 0px;
+    right: 1px;
 }
 </style>

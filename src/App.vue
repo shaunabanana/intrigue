@@ -4,7 +4,9 @@
             @create-node="createNode"
             @update-node="updateNode"
             @delete-node="deleteNode"
-            @create-edge="createEdge"
+            @snap-node="snapNode"
+            @unsnap-node="unsnapNode"
+            @update-edge="updateEdge"
             @update-selection="updateSelection">
         </editor>
     </div>
@@ -12,6 +14,8 @@
 
 <script>
 import Editor from './components/editor';
+const { ipcRenderer } = require('electron');
+const uuid = require('uuid');
 
 export default {
     name: 'App',
@@ -24,7 +28,14 @@ export default {
             },
             nodeMap: {},
             edgeMap: {},
-            selection: []
+            edgeNodeMap: {},
+            selection: [],
+
+            filePath: null,
+            edited: false,
+
+            clipboard: [],
+            history: []
         }
     },
 
@@ -49,6 +60,33 @@ export default {
             }
         },
 
+        findEdgeByNodes (source, target) {
+            if (this.edgeNodeMap[source + target]) return this.edgeNodeMap[source + target];
+            if (this.edgeNodeMap[target + source]) return this.edgeNodeMap[target + source];
+            for (const edge of this.data.edges) {
+                if (
+                    edge.source === source && edge.target === target
+                    || edge.target === source && edge.source === target
+                ) {
+                    this.edgeNodeMap[source + target] = edge;
+                    this.edgeNodeMap[target + source] = edge;
+                    return edge;
+                }
+            }
+        },
+
+        updateSelection (content) {
+            if (content.set) {
+                this.selection = content.set;
+            } else {
+                if (content.add) {
+                    content.add.forEach((id) => {
+                        this.selection.push(id);
+                    })
+                }
+            }
+        },
+
         createNode (id, x, y) {
             const node = {
                 id: id,
@@ -56,29 +94,13 @@ export default {
                 x: x,
                 y: y,
                 w: 200,
-                data: { text: 'Text...' },
+                data: { content: '<p></p>' },
                 edges: [],
-                children: []
+                snap: [],
+                snapped: null
             }
             this.data.nodes.push(node);
-        },
-
-        createEdge (id, source, target) {
-            // Create the edge
-            const edge = {
-                id: id,
-                source: source,
-                target: target
-            }
-
-            // Add the edge id to source and target nodes
-            let sourceNode = this.findNode(source);
-            sourceNode.edges.push(id);
-            let targetNode = this.findNode(target);
-            targetNode.edges.push(id);
-
-            // Add the edge object to edges.
-            this.data.edges.push(edge);
+            this.setEdited();
         },
 
         updateNode (id, content) {
@@ -92,6 +114,7 @@ export default {
                     node[key] += content.by[key];
                 })
             }
+            this.setEdited();
         },
 
         deleteNode (id) {
@@ -109,19 +132,145 @@ export default {
             })
             this.data.nodes = this.data.nodes.filter( node => !this.selection.includes(node.id) );
             this.selection = [];
+            this.setEdited();
         },
 
-        updateSelection (content) {
-            if (content.set) {
-                this.selection = content.set;
+        snapNode (source, target) {
+            let sourceNode = this.findNode(source);
+            let targetNode = this.findNode(target);
+            if (!targetNode.snap.includes(source)) {
+                // If the node is already snapped to something, then unsnap it.
+                if (sourceNode.snapped) {
+                    this.unsnapNode(source, sourceNode.snapped)
+                }
+                targetNode.snap.push(source);
+                sourceNode.snapped = target;
+            }
+            this.setEdited();
+        },
+
+        unsnapNode (source, target) {
+            let sourceNode = this.findNode(source);
+            let targetNode = this.findNode(target);
+            targetNode.snap = targetNode.snap.filter((id) => id !== source);
+            sourceNode.snapped = null;
+            this.setEdited();
+        },
+
+        updateEdge (id, source, target) {
+            let edge = this.findEdgeByNodes(source, target);
+
+            if (edge) {
+                // Delete the edge.
+                let sourceNode = this.findNode(source);
+                let targetNode = this.findNode(target);
+                sourceNode.edges = sourceNode.edges.filter( (edgeId) => edgeId !== edge.id );
+                targetNode.edges = targetNode.edges.filter( (edgeId) => edgeId !== edge.id );
+                this.data.edges = this.data.edges.filter( (other) => other.id !== edge.id );
+                delete this.edgeMap[edge.id];
+                delete this.edgeNodeMap[source + target];
+                delete this.edgeNodeMap[target + source];
             } else {
-                if (content.add) {
-                    content.add.forEach((id) => {
-                        this.selection.push(id);
-                    })
+                // Create the edge.
+                edge = {
+                    id: id,
+                    source: source,
+                    target: target
+                }
+
+                // Add the edge id to source and target nodes
+                let sourceNode = this.findNode(source);
+                sourceNode.edges.push(id);
+                let targetNode = this.findNode(target);
+                targetNode.edges.push(id);
+
+                // Add the edge object to edges.
+                this.data.edges.push(edge);
+            }
+            this.setEdited();
+        },
+
+        deleteEdge (source, target) {
+            for (const edge of this.data.edges) {
+                if (edge.source === source && edge.target === target) {
+                    let sourceNode = this.findNode(source);
+                    let targetNode = this.findNode(target);
+                    sourceNode.edges = sourceNode.edges.filter( (edgeId) => edgeId !== edge.id );
+                    targetNode.edges = targetNode.edges.filter( (edgeId) => edgeId !== edge.id );
                 }
             }
+            this.setEdited();
+        },
+
+        setEdited () {
+            ipcRenderer.send('set-edited');
+            this.edited = true;
+        },
+
+        copy () {
+            if (this.selection.length === 0) return;
+            this.clipboard = [];
+            this.selection.forEach((id) => {
+                let node = this.findNode(id);
+                let nodeCopy = JSON.parse(JSON.stringify(node));
+                nodeCopy.x += 30;
+                nodeCopy.y += 30;
+                nodeCopy.edges = [];
+                nodeCopy.snap = [];
+                nodeCopy.snapped = null;
+                this.clipboard.push(nodeCopy);
+            })
         }
+    },
+
+    mounted () {
+        ipcRenderer.on('new-file', () => {
+            this.data = { nodes: [], edges: [] };
+            this.nodeMap = {};
+            this.edgeMap = {};
+            this.edgeNodeMap = {};
+            this.selection = [];
+            this.filePath = null;
+            this.edited = false;
+        })
+
+        ipcRenderer.on('get-data', (event) => {
+            event.sender.send('send-data', this.edited, this.filePath, JSON.stringify(this.data));
+        })
+
+        ipcRenderer.on('set-data', (event, data) => {
+            this.data = JSON.parse(data);
+        })
+
+        ipcRenderer.on('set-filepath', (event, filePath) => {
+            this.filePath = filePath;
+        })
+
+        ipcRenderer.on('save-finish', () => {
+            this.edited = false;
+        })
+
+        ipcRenderer.on('cut', () => {
+            this.copy();
+            this.data.nodes = this.data.nodes.filter((node) => {
+                return !this.selection.includes(node.id);
+            })
+        })
+
+        ipcRenderer.on('copy', () => {
+            this.copy();
+        })
+
+        ipcRenderer.on('paste', () => {
+            if (this.clipboard.length === 0) return;
+            this.selection = [];
+            this.clipboard.forEach((node) => {
+                let nodeCopy = JSON.parse(JSON.stringify(node));
+                nodeCopy.id = uuid.v4();
+                this.data.nodes.push(nodeCopy);
+                this.selection.push(nodeCopy.id);
+            })
+        })
     }
 }
 </script>

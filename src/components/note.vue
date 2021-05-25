@@ -1,5 +1,12 @@
 <template>
-    <div class="note" :class="{selected: selected, editing: editing}">
+    <div class="note" :class="{
+        selected: selected, 
+        editing: editing,
+        dragndrop: dragndrop,
+        top: position === 'top',
+        middle: position === 'middle',
+        bottom: position === 'bottom'
+    }">
         <editor-content :editor="editor"/>
     </div>
 </template>
@@ -18,7 +25,9 @@ export default {
 
     props: {
         data: { type: Object, required: true },
+        position: { type: String, required: true },
         selected: { type: Boolean, default: false },
+        dragndrop: { type: Boolean, default: false },
         editing: { type: Boolean, default: false },
     },
 
@@ -34,10 +43,14 @@ export default {
 
     mounted() {
         this.editor = new Editor({
-            content: "<p></p>",
+            content: this.data.content,
             extensions: [StarterKit],
             editable: this.editing,
             autofocus: this.editing
+        });
+
+        this.editor.on('update', ({ editor }) => {
+            this.$emit('update-note', editor.view.dom.innerHTML);
         });
     },
 
@@ -86,8 +99,25 @@ export default {
     border: 2px solid rgb(255, 112, 143);
 }
 
+.note.dragndrop {
+    margin: 1px;
+    border: 2px solid rgb(231, 165, 104);
+}
+
 .note.editing {
     cursor: text;
+}
+
+.note.top {
+    border-radius: 1rem 1rem 0 0;
+}
+
+.note.middle {
+    border-radius: 0;
+}
+
+.note.bottom {
+    border-radius: 0 0 1rem 1rem;
 }
 
 .ProseMirror * {

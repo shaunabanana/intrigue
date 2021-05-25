@@ -8,10 +8,10 @@
             <g>
                 <line class="link"
                     v-for="edge in data.edges" :key="edge.id"
-                    :x1="findNode(edge.source).x + findNode(edge.source).w / 2"
-                    :y1="findNode(edge.source).y + nodeHeight(edge.source) / 2"
-                    :x2="findNode(edge.target).x + findNode(edge.target).w / 2"
-                    :y2="findNode(edge.target).y + nodeHeight(edge.target) / 2"
+                    :x1="x + findNode(edge.source).x + findNode(edge.source).w / 2"
+                    :y1="y + findNode(edge.source).y + nodeHeight(edge.source) / 2"
+                    :x2="x + findNode(edge.target).x + findNode(edge.target).w / 2"
+                    :y2="y + findNode(edge.target).y + nodeHeight(edge.target) / 2"
                 />
             </g>
         </svg>
@@ -26,17 +26,33 @@
                 :id="node.id"
                 :type="node.type"
                 :data="node.data" 
+                :snap="node.snap"
+                :snapped="node.snapped"
                 :x="node.x + x" :y="node.y + y" :w="node.w"
                 :selected="selection.includes(node.id)"
+                :pressed="pressed"
+                :dragging="dragging"
+                :dragged="selection.includes(node.id) && dragging"
                 :editing="editing === node.id"
                 @node-mousedown="nodeMousedown"
                 @node-mouseup="nodeMouseup"
                 @node-editing="nodeEditing"
                 @handle-mousedown="handleMousedown"
                 @handle-mouseup="handleMouseup"
+                @drag-enter="dragEnter"
+                @drag-leave="dragLeave"
                 @is-literature="switchToLiterature"
+                @height-changed="nodeHeightChanged"
+                @update-note="updateNote"
                 @update-citation="updateCitation"
                 @delete-node="deleteNode"/>
+        </div>
+
+        <div class="selector" v-if="boxselect"
+            :style="{
+                left: select.x + 'px', top: select.y + 'px',
+                width: select.w + 'px', height: select.h + 'px'
+            }">
         </div>
         <!-- <div id="minimap">
         </div> -->
@@ -84,6 +100,7 @@ export default {
             editing: null,
             resizing: null,
             linking: null,
+            dragndrop: null,
 
             dragStart: null,
             dragStartX: 0,
@@ -91,10 +108,22 @@ export default {
 
             nodeMap: {},
             edgeMap: {},
+
+            select: { x: 0, y: 0, w: 0, h: 0 }
         };
     },
 
     methods: {
+        clearFlags () {
+            // Clear all the flags.
+            this.pressed = false;
+            this.panning = false;
+            this.dragging = false;
+            this.boxselect = false;
+            this.nodePressed = false;
+            this.handlePressed = false;
+        },
+
         findNode (id) {
             if (this.nodeMap[id]) return this.nodeMap[id];
             for (const node of this.data.nodes) {
@@ -111,6 +140,21 @@ export default {
                 if (node.id === id) return node.offsetHeight;
             }
             return 0;
+        },
+
+        expandSelection (id) {
+            const node = this.findNode(id);
+            if (node.snap.length === 0) {
+                return [id];
+            } else {
+                let selection = [id];
+                node.snap.forEach((nodeId) => {
+                    selection = selection.concat(
+                        this.expandSelection(nodeId)
+                    )
+                });
+                return selection;
+            }
         },
 
         createNode (event) {
@@ -153,30 +197,48 @@ export default {
                             by: {x: event.movementX, y: event.movementY}
                         });
                     });
+                    // If the main node we're moving is snapped, then unsnap it.
+                    if (this.selection.length > 0) {
+                        let node = this.findNode(this.selection[0]);
+                        if (node.snapped) {
+                            this.$emit('unsnap-node', node.id, node.snapped)
+                        }
+                    }
 
                 // If we're not panning but a handle is pressed, it means we're resizing.
                 } else if (this.handlePressed) {
-                    this.$emit("update-node", this.resizing, {
-                        by: {w: event.movementX}
-                    });
+                    let all = this.expandSelection(this.resizing);
+                    all.forEach((id) => {
+                        this.$emit("update-node", id, {
+                            by: {w: event.movementX}
+                        });
+                    })
 
                 // Otherwise, we're box selecting.
                 } else {
                     this.boxselect = true;
+                    if (event.pageX < this.dragStart.pageX) {
+                        this.select.x = event.pageX;
+                    } else {
+                        this.select.x = this.dragStart.pageX;
+                    }
+
+                    if (event.pageY < this.dragStart.pageY) {
+                        this.select.y = event.pageY;
+                    } else {
+                        this.select.y = this.dragStart.pageY;
+                    }
+
+                    this.select.w = Math.abs(event.pageX - this.dragStart.pageX);
+                    this.select.h = Math.abs(event.pageY - this.dragStart.pageY);
+
+                    this.updateBoxSelect();
                 }
             }
         },
 
         mouseup() {
-            // Clear all the flags.
-            this.pressed = false;
-            this.panning = false;
-            this.dragging = false;
-            this.boxselect = false;
-        },
-
-        click (event) {
-            console.log('click', event);
+            this.clearFlags();
         },
 
         nodeMousedown (id, event) {
@@ -188,19 +250,77 @@ export default {
 
             if (!this.selection.includes(id)) {
                 if (this.multiselect) {
-                    this.$emit('update-selection', {add: [id]});
+                    this.$emit('update-selection', {add: this.expandSelection(id)});
                 } else if (this.linking) {
-                    console.log("Linking", this.linking, "-->", id);
-                    this.$emit('create-edge', uuid.v4(), this.linking, id);
+                    this.$emit('update-edge', uuid.v4(), this.linking, id);
                 } else {
-                    this.$emit('update-selection', {set: [id]});
+                    this.$emit('update-selection', {set: this.expandSelection(id)});
                 }
             }
         },
 
+        updateSnapLayout (baseId, rootId) {
+            let base = this.findNode(baseId);
+            let y = base.y, lastNode = baseId;
+            let children = this.expandSelection(rootId);
+            children.forEach((nodeId) => {
+                y += this.nodeHeight(lastNode);
+                this.$emit('update-node', nodeId, {
+                    'set': {
+                        x: base.x, y: y,
+                        w: base.w
+                    }
+                })
+                lastNode = nodeId;
+            })
+        },
+
+        inSelectionBound(node) {
+            if (
+                this.x + node.x + node.w >= this.select.x 
+                && this.select.x + this.select.w >= this.x + node.x
+                && this.y + node.y + this.nodeHeight(node.id) >= this.select.y
+                && this.select.y + this.select.h >= this.y + node.y
+            ) return true;
+
+            return false
+        },
+
+        updateBoxSelect () {
+            let selection = [];
+            this.data.nodes.forEach((node) => {
+                if (this.inSelectionBound(node)) {
+                    if (node.snap.length > 0) {
+                        selection = selection.concat(this.expandSelection(node.id));
+                    } else {
+                        selection.push(node.id);
+                    }
+                }
+            })
+            if (this.multiselect) {
+                this.$emit('update-selection', {add: selection});
+            } else {
+                this.$emit('update-selection', {set: selection});
+            }
+        },
+
         nodeMouseup () {
-            this.pressed = false;
-            this.nodePressed = false;
+            this.clearFlags();
+
+            // If we were dropping a note onto something, do it here.
+            if (this.dragndrop) {
+                this.$emit('snap-node', this.selection[0], this.dragndrop);
+                this.updateSnapLayout(this.dragndrop, this.selection[0]);
+                this.dragndrop = null;
+            }
+        },
+
+        dragEnter (id) {
+            this.dragndrop = id;
+        },
+
+        dragLeave () {
+            this.dragndrop = null;
         },
 
         nodeEditing (id) {
@@ -210,6 +330,7 @@ export default {
         handleMousedown (id, event) {
             this.editing = null;
             this.pressed = true;
+            this.dragging = false;
             this.handlePressed = true;
             this.resizing = id;
             this.dragStart = event;
@@ -218,15 +339,20 @@ export default {
         },
 
         handleMouseup () {
-            this.pressed = false;
-            this.handlePressed = false;
+            this.clearFlags();
         },
 
         switchToLiterature (id, doi) {
             this.$emit('update-node', id, {
                 set: {type: 'literature', data: {doi: doi}}
             })
-            console.log(doi);
+        },
+
+        nodeHeightChanged (id) {
+            let base = this.findNode(id);
+            if (base.snap.length === 1) {
+                this.updateSnapLayout(id, base.snap[0]);
+            }
         },
 
         updateCitation (id, data) {
@@ -250,6 +376,12 @@ export default {
             })
         },
 
+        updateNote (id, data) {
+            this.$emit('update-node', id, {
+                set: { data: { content: data } }
+            });
+        },
+
         deleteNode (id) {
             this.$emit('delete-node', id);
         }
@@ -266,9 +398,7 @@ export default {
             } else if (event.key === 'Backspace' || event.key === 'Delete') {
                 if (!this.editing) this.$emit('delete-node');
             } else if (event.key === 'Meta') {
-                if (this.selection.length == 1) {
-                    this.linking = this.selection[0];
-                }
+                this.linking = this.selection[0];
             }
         }
 
@@ -317,5 +447,12 @@ export default {
 .link {
     stroke-width: 1px;
     stroke: #9A9A9B;
+}
+
+.selector {
+    position: fixed;
+    pointer-events: none;
+    background: rgba(84, 162, 235, 0.3);
+    border: 1px solid rgba(33, 103, 172, 0.6);
 }
 </style>

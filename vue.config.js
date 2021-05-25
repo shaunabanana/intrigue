@@ -1,3 +1,9 @@
 module.exports = {
-    runtimeCompiler: true
+    pluginOptions: {
+        electronBuilder: {
+            externals: ['electron'],
+            nodeIntegration: true,
+            contextIsolation: false
+        }
+    }
 }

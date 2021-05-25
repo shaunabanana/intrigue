@@ -1,5 +1,11 @@
 <template>
-    <div class="literature" :class="{selected: selected}">
+    <div class="literature" :class="{
+        selected: selected,
+        dragndrop: dragndrop,
+        top: position === 'top',
+        middle: position === 'middle',
+        bottom: position === 'bottom'
+    }">
         <span class="title"> {{ data.title ? data.title : 'Fetching title...' }} </span> <br />
         <span class="authors"> {{ data.authors ? data.authors : 'Fetching authors...' }} </span>  <br />
         <span class="doi"> {{ data.doi ? data.doi : '' }} </span>
@@ -15,7 +21,9 @@ export default {
 
     props: {
         data: { type: Object, required: true },
+        position: { type: String, required: true },
         selected: { type: Boolean, default: false },
+        dragndrop: { type: Boolean, default: false },
         editing: { type: Boolean, default: false },
     },
 
@@ -56,14 +64,23 @@ export default {
     border: 1px solid rgb(91, 169, 247);
     border-radius: 1rem;
     padding: 0.3rem 0.6rem;
-    margin: 1px;
+    margin: 2px;
 
     word-wrap: break-word;
 }
 
+.literature.top {
+    border-radius: 1rem 1rem 0 0;
+}
+
 .literature.selected {
-    margin: 0px;
+    margin: 1px;
     border: 2px solid rgb(255, 112, 143);
+}
+
+.note.dragndrop {
+    margin: 1px;
+    border: 2px solid rgb(60, 134, 207);
 }
 
 .title {
