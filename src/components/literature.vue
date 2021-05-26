@@ -15,6 +15,7 @@
 <script>
 
 const Cite = require('citation-js');
+const { shell } = require('electron');
 
 export default {
     name: 'Literature',
@@ -46,7 +47,12 @@ export default {
     },
 
     watch: {
-        
+        editing (value) {
+            if (value) {
+                console.log('going to scihub!');
+                shell.openExternal('https://sci-hub.do/' + this.data.doi);
+            }
+        }
     },
 
     beforeDestroy() {
