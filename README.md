@@ -11,9 +11,10 @@
 Intrigue lets you quickly organize the papers you read alongside your thoughts in a visual & clean manner.
 Features include:
 * Automatically pull paper metadata from just a DOI using [Citation.js](https://citation.js.org).
-* Double clicking paper nodes takes you to a PDF from you-know-where.
+* Double clicking paper nodes takes you to a PDF at you-know-where.
 * Full **WYSIWYG** markdown support in the notes, powered by [TipTap](https://www.tiptap.dev).
 * Everything can be grouped, snapped, and connected.
+* _COMING SOON: Import BibTeX files exported from a literature search or other tools like Zotero._
 * _COMING SOON: Export papers into a BibTeX to directly use in your paper-writing process._
 
 Here's a screenshot of my work-in-progress research canvas:
