@@ -15,6 +15,9 @@ Features include:
 * Everything can be grouped, snapped, and connected.
 * _COMING SOON: Export papers into a BibTeX to directly use in your paper-writing process._
 
+Here's a screenshot of my work-in-progress research canvas:
+![A screenshot of the app.](./assets/screenshot.png)
+
 ## How to use?
 It's simple!
 * **Create notes:** Double click to create a note.
