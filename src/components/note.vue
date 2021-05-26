@@ -34,6 +34,7 @@ export default {
     data() {
         return {
             editor: null,
+            edited: false
         };
     },
 
@@ -49,8 +50,15 @@ export default {
             autofocus: this.editing
         });
 
-        this.editor.on('update', ({ editor }) => {
-            this.$emit('update-note', editor.view.dom.innerHTML);
+        this.editor.on('update', () => {
+            this.edited = true;
+        });
+
+        this.editor.on('blur', ({ editor }) => {
+            if (this.edited) {
+                this.$emit('update-note', editor.view.dom.innerHTML);
+            }
+            this.edited = false;
         });
     },
 

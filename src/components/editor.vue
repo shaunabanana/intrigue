@@ -9,9 +9,9 @@
                 <line class="link"
                     v-for="edge in data.edges" :key="edge.id"
                     :x1="x + findNode(edge.source).x + findNode(edge.source).w / 2"
-                    :y1="y + findNode(edge.source).y + nodeHeight(edge.source) / 2"
+                    :y1="y + findNode(edge.source).y + findNode(edge.source).h / 2"
                     :x2="x + findNode(edge.target).x + findNode(edge.target).w / 2"
-                    :y2="y + findNode(edge.target).y + nodeHeight(edge.target) / 2"
+                    :y2="y + findNode(edge.target).y + findNode(edge.target).h / 2"
                 />
             </g>
         </svg>
@@ -159,9 +159,10 @@ export default {
 
         createNode (event) {
             const id = uuid.v4();
-            this.$emit('create-node', id, event.pageX - this.x, event.pageY - this.y);
+            this.$emit('create-node', id, event.pageX - this.x, event.pageY - this.y, null, true);
             this.$emit('update-selection', {set: [id]});
             this.editing = id;
+            this.$emit('edit-start');
         },
 
         updatePosition (id, x, y) {
@@ -177,6 +178,8 @@ export default {
             this.dragStartX = this.x;
             this.dragStartY = this.y;
             this.editing = null;
+
+            this.$emit('edit-stop');
         },
 
         mousemove(event) {
@@ -191,17 +194,31 @@ export default {
 
                 // If we're not panning but a node is pressed, it means we're dragging.
                 } else if (this.nodePressed) {
-                    this.dragging = true;
-                    this.selection.forEach((id) => {
-                        this.$emit("update-node", id, {
-                            by: {x: event.movementX, y: event.movementY}
-                        });
-                    });
                     // If the main node we're moving is snapped, then unsnap it.
                     if (this.selection.length > 0) {
                         let node = this.findNode(this.selection[0]);
-                        if (node.snapped) {
-                            this.$emit('unsnap-node', node.id, node.snapped)
+                        const deltaX = event.pageX - this.dragStart.pageX;
+                        const deltaY = event.pageY - this.dragStart.pageY;
+                        // const x = this.dragStartX + deltaX;
+                        // const y = this.dragStartY + deltaY;
+
+                        const dist = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+
+                        if ( !node.snapped || (node.snapped && dist > 30) ) {
+                            if (node.snapped) {
+                                this.$emit('unsnap-node', node.id, node.snapped);
+                                this.selection.forEach((id) => {
+                                    this.$emit("update-node", id, {
+                                        by: {x: deltaX, y: deltaY}
+                                    })
+                                });
+                            }
+                            this.dragging = true;
+                            this.selection.forEach((id) => {
+                                this.$emit("update-node", id, {
+                                    by: {x: event.movementX, y: event.movementY}
+                                })
+                            });
                         }
                     }
 
@@ -245,8 +262,10 @@ export default {
             this.pressed = true;
             this.nodePressed = true;
             this.dragStart = event;
-            this.dragStartX = this.x;
-            this.dragStartY = this.y;
+
+            const node = this.findNode(id);
+            this.dragStartX = this.panning ? this.x : node.x;
+            this.dragStartY = this.panning ? this.x : node.y;
 
             if (!this.selection.includes(id)) {
                 if (this.multiselect) {
@@ -325,6 +344,7 @@ export default {
 
         nodeEditing (id) {
             this.editing = id;
+            this.$emit('edit-start');
         },
 
         handleMousedown (id, event) {
@@ -336,6 +356,8 @@ export default {
             this.dragStart = event;
             this.dragStartX = this.x;
             this.dragStartY = this.y;
+
+            this.$emit('edit-stop');
         },
 
         handleMouseup () {
@@ -353,6 +375,9 @@ export default {
             if (base.snap.length === 1) {
                 this.updateSnapLayout(id, base.snap[0]);
             }
+            this.$emit('update-node', id, {
+                set: { h: this.nodeHeight(id) }
+            })
         },
 
         updateCitation (id, data) {
@@ -373,13 +398,13 @@ export default {
                     authors: authors,
                     citation: data
                 }}
-            })
+            }, true)
         },
 
         updateNote (id, data) {
             this.$emit('update-node', id, {
                 set: { data: { content: data } }
-            });
+            }, true);
         },
 
         deleteNode (id) {
@@ -411,7 +436,18 @@ export default {
                 this.linking = null;
             }
         }
+    },
+
+    watch: {
+        dragging (value) {
+            if (!value) {
+                console.log('stopped dragging!');
+                this.$emit('drag-stop');
+            }
+        }
     }
+
+
 }
 </script>
 

@@ -1,10 +1,29 @@
 'use strict'
 
-import { app, protocol, BrowserWindow } from 'electron'
+import { app, protocol, BrowserWindow, Menu } from 'electron'
 import installExtension, { VUEJS_DEVTOOLS } from 'electron-devtools-installer'
-import { createWindow } from './scripts/api';
+import { createWindow, menuTemplate } from './scripts/api';
 
 const isDevelopment = process.env.NODE_ENV !== 'production'
+
+// Handle file opening. Need to be done before app is ready.
+
+if (app.isPackaged) {
+    // workaround for missing executable argument)
+    process.argv.unshift(null)
+}
+// parameters is now an array containing any files/folders that your OS will pass to your application
+let filesToOpen = process.argv.slice(2);
+
+app.on('open-file', (event, filePath) => {
+    if (app.isReady()) {
+        createWindow(filePath);
+    } else {
+        filesToOpen.push(filePath);
+    }
+    event.preventDefault();
+});
+
 
 // Scheme must be registered before the app is ready
 protocol.registerSchemesAsPrivileged([
@@ -38,10 +57,20 @@ app.on('ready', async () => {
             console.error('Vue Devtools failed to install:', e.toString())
         }
     }
-    createWindow()
-})
+    if (filesToOpen.length > 0) {
+        filesToOpen.forEach((filePath) => {
+            createWindow(filePath);
+        })
+    } else {
+        createWindow();
+    }
+    
+});
 
-// ipcMain.handle('save', save);
+app.whenReady().then(() => {
+    const menu = Menu.buildFromTemplate(menuTemplate);
+    Menu.setApplicationMenu(menu);
+});
 
 // Exit cleanly on request from parent process in development mode.
 if (isDevelopment) {

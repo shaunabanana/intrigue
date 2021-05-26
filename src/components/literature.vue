@@ -73,6 +73,14 @@ export default {
     border-radius: 1rem 1rem 0 0;
 }
 
+.literature.middle {
+    border-radius: 0 0 0 0;
+}
+
+.literature.bottom {
+    border-radius: 0 0 1rem 1rem;
+}
+
 .literature.selected {
     margin: 1px;
     border: 2px solid rgb(255, 112, 143);

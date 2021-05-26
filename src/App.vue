@@ -4,6 +4,8 @@
             @create-node="createNode"
             @update-node="updateNode"
             @delete-node="deleteNode"
+            @edit-start="editing = true"
+            @edit-stop="editing = false"
             @snap-node="snapNode"
             @unsnap-node="unsnapNode"
             @update-edge="updateEdge"
@@ -14,7 +16,7 @@
 
 <script>
 import Editor from './components/editor';
-const { ipcRenderer } = require('electron');
+const { ipcRenderer, clipboard } = require('electron');
 const uuid = require('uuid');
 
 export default {
@@ -33,9 +35,11 @@ export default {
 
             filePath: null,
             edited: false,
+            editing: false,
 
             clipboard: [],
-            history: []
+            undo: [],
+            redo: [],
         }
     },
 
@@ -85,16 +89,19 @@ export default {
                     })
                 }
             }
+            this.selection = [...new Set(this.selection)];
         },
 
-        createNode (id, x, y) {
+        createNode (id, x, y, content, shouldRecord) {
+            if (shouldRecord) this.recordHistory();
             const node = {
                 id: id,
                 type: 'note',
                 x: x,
                 y: y,
                 w: 200,
-                data: { content: '<p></p>' },
+                h: 30,
+                data: { content: content ? content : '<p></p>' },
                 edges: [],
                 snap: [],
                 snapped: null
@@ -103,7 +110,8 @@ export default {
             this.setEdited();
         },
 
-        updateNode (id, content) {
+        updateNode (id, content, shouldRecord) {
+            if (shouldRecord) this.recordHistory();
             let node = this.findNode(id);
             if (content.set) {
                 Object.keys(content.set).forEach(key => {
@@ -118,6 +126,7 @@ export default {
         },
 
         deleteNode (id) {
+            this.recordHistory();
             if (id) this.selection.push(id);
             this.selection.forEach((nodeId) => {
                 let node = this.findNode(nodeId);
@@ -136,6 +145,7 @@ export default {
         },
 
         snapNode (source, target) {
+            this.recordHistory();
             let sourceNode = this.findNode(source);
             let targetNode = this.findNode(target);
             if (!targetNode.snap.includes(source)) {
@@ -150,6 +160,7 @@ export default {
         },
 
         unsnapNode (source, target) {
+            this.recordHistory();
             let sourceNode = this.findNode(source);
             let targetNode = this.findNode(target);
             targetNode.snap = targetNode.snap.filter((id) => id !== source);
@@ -158,6 +169,7 @@ export default {
         },
 
         updateEdge (id, source, target) {
+            this.recordHistory();
             let edge = this.findEdgeByNodes(source, target);
 
             if (edge) {
@@ -175,7 +187,8 @@ export default {
                 edge = {
                     id: id,
                     source: source,
-                    target: target
+                    target: target,
+                    x1: 0, y1: 0, x2: 0, y2: 0
                 }
 
                 // Add the edge id to source and target nodes
@@ -191,6 +204,7 @@ export default {
         },
 
         deleteEdge (source, target) {
+            this.recordHistory();
             for (const edge of this.data.edges) {
                 if (edge.source === source && edge.target === target) {
                     let sourceNode = this.findNode(source);
@@ -208,18 +222,85 @@ export default {
         },
 
         copy () {
-            if (this.selection.length === 0) return;
-            this.clipboard = [];
-            this.selection.forEach((id) => {
-                let node = this.findNode(id);
-                let nodeCopy = JSON.parse(JSON.stringify(node));
-                nodeCopy.x += 30;
-                nodeCopy.y += 30;
-                nodeCopy.edges = [];
-                nodeCopy.snap = [];
-                nodeCopy.snapped = null;
-                this.clipboard.push(nodeCopy);
-            })
+            if (this.editing) {
+                document.execCommand('copy');
+            } else {
+                let clipboardContent = [];
+                this.selection.forEach((id) => {
+                    let node = this.findNode(id);
+                    let nodeCopy = JSON.parse(JSON.stringify(node));
+                    nodeCopy.x += 30;
+                    nodeCopy.y += 30;
+                    nodeCopy.edges = [];
+                    nodeCopy.snap = [];
+                    nodeCopy.snapped = null;
+                    clipboardContent.push(nodeCopy);
+                })
+                clipboard.writeText(JSON.stringify({
+                    type: 'intrigue-clipboard',
+                    content: clipboardContent
+                }));
+            }
+        },
+
+        paste () {
+            let clipboardText = clipboard.readText();
+            let clipboardContent, pasteAsText = true;
+            try {
+                clipboardContent = JSON.parse(clipboardText);
+                if (clipboardContent.type && clipboardContent.type === 'intrigue-clipboard') {
+                    pasteAsText = false;
+                }
+            } catch {
+                console.log('Pasting as text:', clipboardText);
+            }
+
+            if (pasteAsText) {
+                if (this.editing) {
+                    // paste normally from clipboard.
+                    document.execCommand('paste');
+                } else {
+                    // Create a new node with the text.
+
+                    console.log('Pasting as new note', clipboardText);
+                    this.createNode(
+                        uuid.v4(), window.innerWidth / 2, window.innerHeight / 2, clipboardText
+                    );
+                }
+            } else {
+                console.log(clipboardContent);
+                this.selection = [];
+                clipboardContent.content.forEach((node) => {
+                    node.id = uuid.v4();
+                    this.data.nodes.push(node);
+                    this.selection.push(node.id);
+                })
+            }
+        },
+
+        recordHistory () {
+            // this.undo.push(JSON.stringify(this.data));
+        },
+
+        undoHistory () {
+            if (this.editing) {
+                document.execCommand('undo');
+            } else {
+                if (this.undo.length === 0) return;
+                this.redo.push(JSON.stringify(this.data));
+                this.data = JSON.parse(this.undo.pop());
+            }
+        },
+
+        redoHistory () {
+            if (this.editing) {
+                document.execCommand('redo');
+            } else {
+                if (this.redo.length === 0) return;
+                this.undo.push(JSON.stringify(this.data));
+                this.data = JSON.parse(this.redo.pop());
+            }
+            
         }
     },
 
@@ -239,7 +320,14 @@ export default {
         })
 
         ipcRenderer.on('set-data', (event, data) => {
-            this.data = JSON.parse(data);
+            let newData = JSON.parse(data);
+            newData.nodes.forEach((node) => {
+                node.x = node.x ? node.x : window.innerWidth / 2;
+                node.y = node.y ? node.y : window.innerHeight / 2;
+                node.w = node.w ? node.w : 200;
+                node.h = node.h ? node.h : 30;
+            })
+            this.data = newData;
         })
 
         ipcRenderer.on('set-filepath', (event, filePath) => {
@@ -248,6 +336,14 @@ export default {
 
         ipcRenderer.on('save-finish', () => {
             this.edited = false;
+        })
+
+        ipcRenderer.on('undo', () => {
+            this.undoHistory();
+        })
+
+        ipcRenderer.on('redo', () => {
+            this.redoHistory();
         })
 
         ipcRenderer.on('cut', () => {
@@ -262,14 +358,18 @@ export default {
         })
 
         ipcRenderer.on('paste', () => {
-            if (this.clipboard.length === 0) return;
-            this.selection = [];
-            this.clipboard.forEach((node) => {
-                let nodeCopy = JSON.parse(JSON.stringify(node));
-                nodeCopy.id = uuid.v4();
-                this.data.nodes.push(nodeCopy);
-                this.selection.push(nodeCopy.id);
-            })
+            this.paste();
+        })
+
+        ipcRenderer.on('selectall', () => {
+            if (this.editing) {
+                document.execCommand('selectAll');
+            } else {
+                this.selection = [];
+                this.data.nodes.forEach((node) => {
+                    this.selection.push(node.id);
+                })
+            }
         })
     }
 }

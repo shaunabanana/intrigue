@@ -3,7 +3,17 @@ module.exports = {
         electronBuilder: {
             externals: ['electron'],
             nodeIntegration: true,
-            contextIsolation: false
+            contextIsolation: false,
+            builderOptions: {
+                fileAssociations: [
+                    {
+                        ext: "intrigue", 
+                        name: "Intrigue Literature Map",
+                        description: "Intrigue literature map file.",
+                        role: "Editor",
+                    }
+                ]
+            }
         }
     }
 }

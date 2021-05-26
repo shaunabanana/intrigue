@@ -191,7 +191,7 @@ export default {
 <style scoped>
 .node {
     position: absolute;
-    cursor: default;
+    cursor: pointer;
 }
 
 .noselect {
