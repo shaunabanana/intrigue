@@ -1,4 +1,4 @@
-<p align="center">
+<p align="center" style="pointer-events: none;">
   <img src="./build/icons/128x128@2x.png" width="150px">
 </p>
 <h3 align="center">Intrigue</h3>
