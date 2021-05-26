@@ -1,24 +1,28 @@
-# intrigue
+<p align="center">
+  <img src="./build/icons/128x128@2x.png" width="150px">
+</p>
+<h3 align="center">Intrigue</h3>
+<p align="center">Organize literature into ideas, fast.</p>
+<p align="center">
+  <a href="">Download Demo</a> | <a href="https://github.com/shaunabanana/intrigue/issues">Report Bugs</a>
+</p>
 
-## Project setup
-```
-npm install
-```
+## What is this?
+Intrigue lets you quickly organize the papers you read alongside your thoughts in a visual & clean manner.
+Features include:
+* Automatically pull paper metadata from just a DOI using [Citation.js](https://citation.js.org).
+* Full **WYSIWYG** markdown support in the notes, powered by [TipTap](https://www.tiptap.dev).
+* Everything can be grouped, snapped, and connected.
+* _COMING SOON: Export papers into a BibTeX to directly use in your paper-writing process._
 
-### Compiles and hot-reloads for development
-```
-npm run serve
-```
+## How to use?
+It's simple!
+* **Create notes:** Double click to create a note.
+  * Enter an DOI into a note to have it automatically turned into a paper note.
+* **Snap notes:** Drag one note onto another to snap them together.
+* **Connect notes:** Select a note, hold Command and click other notes to connect.
+  * Click again to disconnect.
+* **Pan canvas:** Hold space to pan the canvas.
 
-### Compiles and minifies for production
-```
-npm run build
-```
-
-### Lints and fixes files
-```
-npm run lint
-```
-
-### Customize configuration
-See [Configuration Reference](https://cli.vuejs.org/config/).
+## I found a bug!
+Please file an issue [here](https://github.com/shaunabanana/intrigue/issues), or email me at shengchenzhang1207@gmail.com.
