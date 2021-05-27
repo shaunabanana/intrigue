@@ -6,12 +6,13 @@
 
         <svg id="edges">
             <g>
-                <line class="link"
+                <edge
                     v-for="edge in data.edges" :key="edge.id"
-                    :x1="x + findNode(edge.source).x + findNode(edge.source).w / 2"
-                    :y1="y + findNode(edge.source).y + findNode(edge.source).h / 2"
-                    :x2="x + findNode(edge.target).x + findNode(edge.target).w / 2"
-                    :y2="y + findNode(edge.target).y + findNode(edge.target).h / 2"
+                    :id="edge.id"
+                    :canvas-x="x"
+                    :canvas-y="y"
+                    :source="findNode(edge.source)"
+                    :target="findNode(edge.target)"
                 />
             </g>
         </svg>
@@ -61,12 +62,13 @@
 
 <script>
 import Node from './node.vue';
+import Edge from './edge.vue';
 
 const uuid = require('uuid');
 
 export default {
     name: 'Editor',
-    components: { Node },
+    components: { Node, Edge },
     props: {
         data: {
             type: Object,
@@ -498,11 +500,6 @@ export default {
     position: fixed;
     top: 1rem;
     right: 1rem;
-}
-
-.link {
-    stroke-width: 1px;
-    stroke: #9A9A9B;
 }
 
 .selector {
