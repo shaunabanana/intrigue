@@ -93,7 +93,6 @@ export default {
             handlePressed: false,
             dragndrop: false,
             lastHeight: 0,
-            handleContent: '. .. .. .'
         }
     },
 
@@ -166,20 +165,23 @@ export default {
             if ( this.lastHeight !== this.$el.offsetHeight ) {
                 this.$emit('height-changed', this.id);
                 this.lastHeight = this.$el.offsetHeight;
-
-                this.handleContent = '. ' + '.. '.repeat(
-                    Math.floor(
-                        (this.lastHeight
-                         - rem2px(0.3) * 2  // 0.3rem padding
-                         - 4 * 2)           // two single dots, 4px per line
-                        / 4)                // 4px per line
-                ) + '.';
             }
         });
         obs.observe(this.$el);
     },
 
     computed: {
+        handleContent () {
+            let repeat = Math.floor(
+                (this.lastHeight
+                    - rem2px(0.3) * 2  // 0.3rem padding
+                    - 4 * 2)           // two single dots, 4px per line
+                / 4                    // 4px per line
+            );
+            if (repeat < 0) repeat = 0;
+            return '. ' + '.. '.repeat(repeat) + (this.position === 'none' ? '.' : '..');
+        },
+
         position () {
             if (this.snapped) {
                 if (this.snap.length > 0) {

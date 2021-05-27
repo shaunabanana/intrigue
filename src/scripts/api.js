@@ -130,7 +130,8 @@ export const menuTemplate = [
             ...(isMac ? [
                 { type: 'separator' },
                 { role: 'front' },
-                { type: 'separator' }
+                { type: 'separator' },
+                { role: 'close' }
             ] : [
                 { role: 'close' }
             ])
