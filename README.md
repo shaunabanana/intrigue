@@ -4,7 +4,7 @@
 <h3 align="center">Intrigue</h3>
 <p align="center">Organize literature into ideas, fast.</p>
 <p align="center">
-  <a href="https://github.com/shaunabanana/intrigue/releases/tag/v0.1.1">Download Demo</a> | <a href="https://github.com/shaunabanana/intrigue/issues">Report Bugs</a>
+  <a href="https://github.com/shaunabanana/intrigue/releases/tag/v0.1.2">Download Demo (v0.1.2)</a> | <a href="https://github.com/shaunabanana/intrigue/issues">Report Bugs</a>
 </p>
 
 ## What is this?
