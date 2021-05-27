@@ -444,9 +444,10 @@ export default {
                 this.multiselect = true;
             } else if (event.key === 'Backspace' || event.key === 'Delete') {
                 if (!this.editing) this.$emit('delete-node');
-            } else if (event.key === 'Meta') {
+            } else if (event.key === 'Meta' || event.key === 'Control') {
                 this.linking = this.selection[0];
             }
+            console.log(event);
         }
 
         document.onkeyup = (event) => {
@@ -454,7 +455,7 @@ export default {
                 this.panning = false;
             } else if (event.key === 'Shift') {
                 this.multiselect = false;
-            } else if (event.key === 'Meta') {
+            } else if (event.key === 'Meta' || event.key === 'Control') {
                 this.linking = null;
             }
         }
