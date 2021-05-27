@@ -11,6 +11,7 @@ module.exports = {
                         name: "Intrigue Literature Map",
                         description: "Intrigue literature map file.",
                         role: "Editor",
+                        icon: "document.icns"
                     }
                 ]
             }

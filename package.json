@@ -1,7 +1,7 @@
 {
   "name": "intrigue",
-  "productName": "Intrigue", 
-  "version": "0.1.0",
+  "productName": "Intrigue",
+  "version": "0.1.2",
   "private": true,
   "scripts": {
     "serve": "vue-cli-service serve",
@@ -14,11 +14,14 @@
   },
   "main": "background.js",
   "dependencies": {
+    "@citation-js/plugin-isbn": "^0.3.0",
     "@tiptap/starter-kit": "*",
     "@tiptap/vue-2": "*",
+    "axios": "^0.21.1",
     "citation-js": "^0.5.1",
     "core-js": "^3.6.5",
     "doi-regex": "^0.1.10",
+    "isbn3": "^1.1.11",
     "uuid": "^3.4.0",
     "vue": "^2.6.11"
   },

@@ -16,6 +16,7 @@ import { Editor, EditorContent } from "@tiptap/vue-2";
 import StarterKit from "@tiptap/starter-kit";
 
 const doi = require('doi-regex');
+const {extract_isbn, extract_link } = require('../scripts/utils');
 
 export default {
     name: 'Note',
@@ -74,9 +75,28 @@ export default {
                 if (content.length === 0) {
                     this.$emit('is-empty');
                 } else {
-                    const dois = content.match(doi());
+                    // Check for DOIs
+                    const dois = content.trim().match(doi());
                     if (dois) {
-                        this.$emit('is-literature', dois[0]);
+                        console.log('This is DOI')
+                        this.$emit('is-literature', dois[0], 'doi');
+                        return;
+                    }
+
+                    // check for ISBN
+                    const isbn = extract_isbn(content.trim());
+                    if (isbn) {
+                        console.log('This is ISBN', isbn)
+                        this.$emit('is-literature', isbn, 'isbn');
+                        return;
+                    }
+
+                    // check for link
+                    const link = extract_link(content.trim());
+                    if (link) {
+                        console.log('This is Link', link)
+                        this.$emit('is-literature', link, 'link');
+                        return;
                     }
                 }
             }
@@ -137,6 +157,10 @@ export default {
 .ProseMirror h1, h2, h3 {
     margin-block-start: 0.5rem;
     margin: 0px;
+}
+
+.ProseMirror ul {
+    padding-inline-start: 1.2rem;
 }
 
 </style>

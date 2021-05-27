@@ -107,20 +107,20 @@ export const menuTemplate = [
         ]
     },
     // { role: 'viewMenu' }
-    // {
-    //     label: 'View',
-    //     submenu: [
-    //         { role: 'reload' },
-    //         { role: 'forceReload' },
-    //         { role: 'toggleDevTools' },
-    //         { type: 'separator' },
-    //         { role: 'resetZoom' },
-    //         { role: 'zoomIn' },
-    //         { role: 'zoomOut' },
-    //         { type: 'separator' },
-    //         { role: 'togglefullscreen' }
-    //     ]
-    // },
+    {
+        label: 'View',
+        submenu: [
+            { role: 'reload' },
+            { role: 'forceReload' },
+            { role: 'toggleDevTools' },
+            { type: 'separator' },
+            { role: 'resetZoom' },
+            { role: 'zoomIn' },
+            { role: 'zoomOut' },
+            { type: 'separator' },
+            { role: 'togglefullscreen' }
+        ]
+    },
     // { role: 'windowMenu' }
     {
         label: 'Window',
@@ -169,6 +169,7 @@ export async function createWindow(filePath) {
             // See nklayman.github.io/vue-cli-plugin-electron-builder/guide/security.html#node-integration for more info
             nodeIntegration: process.env.ELECTRON_NODE_INTEGRATION,
             contextIsolation: !process.env.ELECTRON_NODE_INTEGRATION,
+            webSecurity: false // Allow CORS.
             // preload: path.join(__dirname, 'preload.js')
         }
     });
@@ -317,3 +318,24 @@ export function Paste(item, window) {
 export function SelectAll(item, window) {
     window.webContents.send('selectall');
 }
+
+// ipcMain.handle('request-url', async (event, url) => {
+//     const session = event.sender.session;
+//     session.resolveProxy('https://www.bing.com/', proxyUrl => {
+//         console.log(proxyUrl);
+//         // let proxySettings = null;
+//         // DIRECT means no proxy is configured
+//         if (proxyUrl !== 'DIRECT') {
+//             // retrieve the parts of the proxy from the string returned
+//             // the url would look something like: 'PROXY http-proxy.mydomain.com:8080'
+//             const proxyUrlComponents = proxyUrl.split(':');
+
+//             const proxyHost = proxyUrlComponents[0].split(' ')[1];
+//             // const proxyPort = parseInt(proxyParts[1], 10);
+
+//             console.log(proxyUrl, proxyUrlComponents, proxyHost);
+//         }
+//     });
+//     let data = await axios.get(url);
+//     return { url: data.request.res.responseUrl, data: data.data };
+// })

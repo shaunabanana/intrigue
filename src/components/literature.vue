@@ -8,14 +8,16 @@
     }">
         <span class="title"> {{ data.title ? data.title : 'Fetching title...' }} </span> <br />
         <span class="authors"> {{ data.authors ? data.authors : 'Fetching authors...' }} </span>  <br />
-        <span class="doi"> {{ data.doi ? data.doi : '' }} </span>
+        <span class="identifier"> {{ data.identifier ? data.identifier : '' }} </span>
     </div>
 </template>
 
 <script>
 
 const Cite = require('citation-js');
+require('@citation-js/plugin-isbn');
 const { shell } = require('electron');
+const axios = require('axios');
 
 export default {
     name: 'Literature',
@@ -37,10 +39,21 @@ export default {
     },
 
     mounted() {
+        console.log(this.data.type);
         if (this.data.citation) {
             console.log(this.data.citation);
+        } else if (this.data.type === 'link') {
+            axios.get(this.data.identifier).then( (data) => {
+                console.log(data.request)
+                let matches = data.data.match(/<title>(.*?)<\/title>/);
+                this.$emit('update-citation', {
+                    title: matches[1],
+                    author: [{family: 'Web link'}],
+                    url: data.request.responseURL
+                });
+            });
         } else {
-            new Cite.async(this.data.doi, (data) => {
+            new Cite.async(this.data.identifier, (data) => {
                 this.$emit('update-citation', data.data[0]);
             });
         }
@@ -49,8 +62,15 @@ export default {
     watch: {
         editing (value) {
             if (value) {
-                console.log('going to scihub!');
-                shell.openExternal('https://sci-hub.do/' + this.data.doi);
+                console.log(this.data);
+                if (this.data.type === 'doi') {
+                    shell.openExternal('https://sci-hub.do/' + this.data.identifier);
+                } else if (this.data.type === 'isbn') {
+                    shell.openExternal('http://libgen.rs/search.php?req=' + this.data.identifier);
+                } else if (this.data.type === 'link') {
+                    shell.openExternal(this.data.identifier);
+                }
+                
             }
         }
     },
@@ -92,7 +112,7 @@ export default {
     border: 2px solid rgb(255, 112, 143);
 }
 
-.note.dragndrop {
+.literature.dragndrop {
     margin: 1px;
     border: 2px solid rgb(60, 134, 207);
 }
@@ -105,7 +125,7 @@ export default {
     font-weight: normal;
 }
 
-.doi {
+.identifier {
     font-weight: normal;
     font-style: italic;
 }

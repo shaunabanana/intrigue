@@ -364,9 +364,15 @@ export default {
             this.clearFlags();
         },
 
-        switchToLiterature (id, doi) {
+        switchToLiterature (id, identifier, type) {
             this.$emit('update-node', id, {
-                set: {type: 'literature', data: {doi: doi}}
+                set: {
+                    type: 'literature', 
+                    data: {
+                        identifier: identifier,
+                        type: type
+                    }
+                }
             })
         },
 
@@ -391,12 +397,26 @@ export default {
                     authors += ', '
                 }
             }
+            
+            let identifier, literatureType;
+            if (data.DOI) {
+                identifier = data.DOI;
+                literatureType = 'doi';
+            } else if (data.ISBN) {
+                identifier = data.ISBN;
+                literatureType = 'isbn';
+            } else if (data.url) {
+                identifier = data.url;
+                literatureType = 'link';
+            }
+
             this.$emit('update-node', id, {
                 set: {data: {
-                    doi: data.DOI,
+                    identifier: identifier,
                     title: data.title,
                     authors: authors,
-                    citation: data
+                    citation: data,
+                    type: literatureType
                 }}
             }, true)
         },

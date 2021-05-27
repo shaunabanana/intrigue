@@ -54,6 +54,7 @@
             v-if="selected && (position === 'none' || position === 'top')"
             @mousedown="handleMousedown"
             @mouseup="handleMouseup">
+            <span>{{handleContent}}</span>
         </div>
 
     </div>
@@ -63,6 +64,7 @@
 import Note from "./note.vue";
 import Literature from "./literature.vue";
 import Region from "./region.vue";
+import { rem2px } from "../scripts/utils";
 
 export default {
     name: 'Node',
@@ -91,6 +93,7 @@ export default {
             handlePressed: false,
             dragndrop: false,
             lastHeight: 0,
+            handleContent: '. .. .. .'
         }
     },
 
@@ -140,8 +143,8 @@ export default {
             e.stopPropagation();
         },
 
-        switchToLiterature (doi) {
-            this.$emit('is-literature', this.id, doi);
+        switchToLiterature (identifier, type) {
+            this.$emit('is-literature', this.id, identifier, type);
         },
 
         updateCitation (data) {
@@ -163,6 +166,14 @@ export default {
             if ( this.lastHeight !== this.$el.offsetHeight ) {
                 this.$emit('height-changed', this.id);
                 this.lastHeight = this.$el.offsetHeight;
+
+                this.handleContent = '. ' + '.. '.repeat(
+                    Math.floor(
+                        (this.lastHeight
+                         - rem2px(0.3) * 2  // 0.3rem padding
+                         - 4 * 2)           // two single dots, 4px per line
+                        / 4)                // 4px per line
+                ) + '.';
             }
         });
         obs.observe(this.$el);
@@ -203,7 +214,29 @@ export default {
             user-select: none; /* Non-prefixed version, currently
                                   supported by Chrome, Edge, Opera and Firefox */
 }
-
+.handle {
+    position: absolute;
+    top: 1px;
+    content: '....';
+    width: 0.5rem;
+    height: calc(100% - 4px);
+    display: inline-block;
+    overflow: hidden;
+    line-height: 4px;
+    padding: 3px 2px;
+    cursor: col-resize;
+    vertical-align: middle;
+    margin-right: .1em;
+    font-size: 0.6rem;
+    font-family: sans-serif;
+    letter-spacing: 2px;
+    color: #8f8f8f;
+    text-shadow: 1px 0 1px black;
+}
+/* .handle::after {
+    content: '';
+} */
+/*
 .handle {
     position: absolute;
     height: calc(100% - 4px);
@@ -212,7 +245,7 @@ export default {
     border-radius: 0 1rem 1rem 0;
     background: rgba(128, 99, 4, 0.2);
     cursor: col-resize;
-}
+} */
 
 .top .handle {
     border-radius: 0 1rem 0 0;
