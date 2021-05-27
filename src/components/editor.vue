@@ -272,7 +272,7 @@ export default {
             if (!this.selection.includes(id)) {
                 if (this.multiselect) {
                     this.$emit('update-selection', {add: this.expandSelection(id)});
-                } else if (this.linking) {
+                } else if (this.linking && this.linking !== id) {   // must check that the node being linked is not itself!
                     this.$emit('update-edge', uuid.v4(), this.linking, id);
                 } else {
                     this.$emit('update-selection', {set: this.expandSelection(id)});
