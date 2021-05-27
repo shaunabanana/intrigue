@@ -10,10 +10,10 @@
 ## What is this?
 Intrigue lets you quickly organize the papers you read alongside your thoughts in a visual & clean manner.
 Features include:
-* Automatically pull paper metadata from just a DOI using [Citation.js](https://citation.js.org).
-* Double clicking paper nodes takes you to a PDF at you-know-where.
+* Automatically pull metadata of **papers (using DOI), books (using ISBN), and web links** using [Citation.js](https://citation.js.org).
+* Double clicking reference nodes takes you to a PDF at you-know-where.
 * Full **WYSIWYG** markdown support in the notes, powered by [TipTap](https://www.tiptap.dev).
-* Everything can be grouped, snapped, and connected.
+* Everything can be **grouped, snapped, and connected**.
 * _COMING SOON: Import BibTeX files exported from a literature search or other tools like Zotero._
 * _COMING SOON: Export papers into a BibTeX to directly use in your paper-writing process._
 
@@ -23,8 +23,8 @@ Here's a screenshot of my work-in-progress research canvas:
 ## How to use?
 It's simple!
 * **Create notes:** Double click to create a note.
-  * Enter an DOI into a note to have it automatically turned into a paper note.
-  * Double click the note again the edit. Or for a paper note, go to a site for PDF ;)
+  * Enter an DOI, ISBN, or URL into a note to have it automatically turned into a "reference note" (blue).
+  * Double click the note again the edit. Or for a reference note, go to a site for PDF ;)
 * **Snap notes:** Drag one note onto another to snap them together.
 * **Connect notes:** Select a note, hold Command and click other notes to connect.
   * Click again to disconnect.
