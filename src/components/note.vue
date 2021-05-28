@@ -16,6 +16,8 @@ import { Editor, EditorContent } from "@tiptap/vue-2";
 import StarterKit from "@tiptap/starter-kit";
 
 const doi = require('doi-regex');
+const Cite = require('citation-js');
+require('@citation-js/plugin-bibtex');
 const {extract_isbn, extract_link } = require('../scripts/utils');
 
 export default {
@@ -98,6 +100,16 @@ export default {
                         this.$emit('is-literature', link, 'link');
                         return;
                     }
+
+                    // check for BibTeX. Because this is async, this must be done in the end of all checking.
+                    try {
+                        Cite.async(content, () => {
+                            this.$emit('is-literature', content, 'bibtex');
+                        });
+                    } catch {
+                        console.log('not a bibtex');
+                    }
+                    
                 }
             }
         }

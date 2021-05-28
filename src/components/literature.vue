@@ -53,6 +53,7 @@ export default {
                 });
             });
         } else {
+            // Handles both BibTex and DOIs.
             new Cite.async(this.data.identifier, (data) => {
                 this.$emit('update-citation', data.data[0]);
             });
@@ -62,8 +63,9 @@ export default {
     watch: {
         editing (value) {
             if (value) {
-                console.log(this.data);
+                if (!this.data.type && this.data.doi) this.data.type = 'doi'; // to maintain compatibility with old data structure.
                 if (this.data.type === 'doi') {
+                    if (!this.data.identifier) this.data.identifier = this.data.doi; // to maintain compatibility with old data structure.
                     shell.openExternal('https://sci-hub.do/' + this.data.identifier);
                 } else if (this.data.type === 'isbn') {
                     shell.openExternal('http://libgen.rs/search.php?req=' + this.data.identifier);

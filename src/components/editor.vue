@@ -447,7 +447,6 @@ export default {
             } else if (event.key === 'Meta' || event.key === 'Control') {
                 this.linking = this.selection[0];
             }
-            console.log(event);
         }
 
         document.onkeyup = (event) => {

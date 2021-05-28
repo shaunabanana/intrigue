@@ -19,7 +19,7 @@ export default {
 
     data () {
         return {
-            smoothing: 20,
+            smoothing: 15,
             spacing: 60,
         }
     },

@@ -131,6 +131,12 @@ export default {
             this.selection.forEach((nodeId) => {
                 let node = this.findNode(nodeId);
 
+                // Unsnap node
+                if (node.snapped) {
+                    this.unsnapNode(node.id, node.snapped);
+                }
+
+                // Delete edges
                 node.edges.forEach((edgeId) => {
                     delete this.edgeMap[edgeId];
                 })
@@ -316,7 +322,7 @@ export default {
         })
 
         ipcRenderer.on('get-data', (event) => {
-            event.sender.send('send-data', this.edited, this.filePath, JSON.stringify(this.data));
+            event.sender.send('send-data', this.edited, this.filePath, JSON.stringify(this.data, null, 2));
         })
 
         ipcRenderer.on('set-data', (event, data) => {
