@@ -7,7 +7,6 @@ import { createWindow, menuTemplate } from './scripts/api';
 const isDevelopment = process.env.NODE_ENV !== 'production'
 
 // Handle file opening. Need to be done before app is ready.
-
 if (app.isPackaged) {
     // workaround for missing executable argument)
     process.argv.unshift(null)

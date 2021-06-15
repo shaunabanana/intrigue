@@ -3,7 +3,7 @@ import { createProtocol } from 'vue-cli-plugin-electron-builder/lib'
 const fs = require('fs');
 const path = require('path');
 
-const isMac = process.platform === 'darwin'
+const isMac = process.platform === 'darwin';
 
 export const menuTemplate = [
     // { role: 'appMenu' }
@@ -12,6 +12,10 @@ export const menuTemplate = [
         submenu: [
             { role: 'about' },
             { type: 'separator' },
+            {
+                label: 'Preferences...',
+                accelerator: 'CommandOrControl+,'
+            },
             { role: 'services' },
             { type: 'separator' },
             { role: 'hide' },
@@ -319,24 +323,3 @@ export function Paste(item, window) {
 export function SelectAll(item, window) {
     window.webContents.send('selectall');
 }
-
-// ipcMain.handle('request-url', async (event, url) => {
-//     const session = event.sender.session;
-//     session.resolveProxy('https://www.bing.com/', proxyUrl => {
-//         console.log(proxyUrl);
-//         // let proxySettings = null;
-//         // DIRECT means no proxy is configured
-//         if (proxyUrl !== 'DIRECT') {
-//             // retrieve the parts of the proxy from the string returned
-//             // the url would look something like: 'PROXY http-proxy.mydomain.com:8080'
-//             const proxyUrlComponents = proxyUrl.split(':');
-
-//             const proxyHost = proxyUrlComponents[0].split(' ')[1];
-//             // const proxyPort = parseInt(proxyParts[1], 10);
-
-//             console.log(proxyUrl, proxyUrlComponents, proxyHost);
-//         }
-//     });
-//     let data = await axios.get(url);
-//     return { url: data.request.res.responseUrl, data: data.data };
-// })

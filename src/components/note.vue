@@ -77,37 +77,36 @@ export default {
                 if (content.length === 0) {
                     this.$emit('is-empty');
                 } else {
-                    // Check for DOIs
-                    const dois = content.trim().match(doi());
-                    if (dois) {
-                        console.log('This is DOI')
-                        this.$emit('is-literature', dois[0], 'doi');
-                        return;
-                    }
-
-                    // check for ISBN
-                    const isbn = extract_isbn(content.trim());
-                    if (isbn) {
-                        console.log('This is ISBN', isbn)
-                        this.$emit('is-literature', isbn, 'isbn');
-                        return;
-                    }
-
-                    // check for link
-                    const link = extract_link(content.trim());
-                    if (link) {
-                        console.log('This is Link', link)
-                        this.$emit('is-literature', link, 'link');
-                        return;
-                    }
-
-                    // check for BibTeX. Because this is async, this must be done in the end of all checking.
+                    // check for BibTeX. Because this is async, this must be done at the start/in the end of all checking.
                     try {
                         Cite.async(content, () => {
                             this.$emit('is-literature', content, 'bibtex');
                         });
+
                     } catch {
-                        console.log('not a bibtex');
+                        // Check for DOIs
+                        const dois = content.trim().match(doi());
+                        if (dois) {
+                            console.log('This is DOI')
+                            this.$emit('is-literature', dois[0], 'doi');
+                            return;
+                        }
+
+                        // check for ISBN
+                        const isbn = extract_isbn(content.trim());
+                        if (isbn) {
+                            console.log('This is ISBN', isbn)
+                            this.$emit('is-literature', isbn, 'isbn');
+                            return;
+                        }
+
+                        // check for link
+                        const link = extract_link(content.trim());
+                        if (link) {
+                            console.log('This is Link', link)
+                            this.$emit('is-literature', link, 'link');
+                            return;
+                        }
                     }
                     
                 }
