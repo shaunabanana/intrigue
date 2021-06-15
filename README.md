@@ -4,13 +4,13 @@
 <h3 align="center">Intrigue</h3>
 <p align="center">Organize literature into ideas, fast.</p>
 <p align="center">
-  <a href="https://github.com/shaunabanana/intrigue/releases/tag/v0.1.2">Download Demo (v0.1.2)</a> | <a href="https://github.com/shaunabanana/intrigue/issues">Report Bugs</a>
+  <a href="https://github.com/shaunabanana/intrigue/releases/tag/v0.1.3">Download Demo (v0.1.3)</a> | <a href="https://github.com/shaunabanana/intrigue/issues">Report Bugs</a>
 </p>
 
 ## What is this?
 Intrigue lets you quickly organize the papers you read alongside your thoughts in a visual & clean manner.
 Features include:
-* Automatically pull metadata of **papers (using DOI), books (using ISBN), and web links** using [Citation.js](https://citation.js.org).
+* Automatically pull metadata of **papers (using DOI), books (using ISBN), BibTeX, and web links** using [Citation.js](https://citation.js.org).
 * Double clicking reference nodes takes you to a PDF at you-know-where.
 * Full **WYSIWYG** markdown support in the notes, powered by [TipTap](https://www.tiptap.dev).
 * Everything can be **grouped, snapped, and connected**.
