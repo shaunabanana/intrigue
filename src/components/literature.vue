@@ -66,7 +66,7 @@ export default {
                 if (!this.data.type && this.data.doi) this.data.type = 'doi'; // to maintain compatibility with old data structure.
                 if (this.data.type === 'doi') {
                     if (!this.data.identifier) this.data.identifier = this.data.doi; // to maintain compatibility with old data structure.
-                    shell.openExternal('https://sci-hub.do/' + this.data.identifier);
+                    shell.openExternal('https://sci-hub.ee/' + this.data.identifier);
                 } else if (this.data.type === 'isbn') {
                     shell.openExternal('http://libgen.rs/search.php?req=' + this.data.identifier);
                 } else if (this.data.type === 'link') {
