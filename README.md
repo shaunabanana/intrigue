@@ -4,7 +4,7 @@
 <h3 align="center">Intrigue</h3>
 <p align="center">Organize literature into ideas, fast.</p>
 <p align="center">
-  <a href="https://github.com/shaunabanana/intrigue/releases/tag/v0.1.4">Download Demo (v0.1.4)</a> | <a href="https://github.com/shaunabanana/intrigue/issues">Report Bugs</a>
+  <a href="https://github.com/shaunabanana/intrigue/releases/tag/v0.1.5">Download Demo (v0.1.5)</a> | <a href="https://github.com/shaunabanana/intrigue/issues">Report Bugs</a>
 </p>
 
 > NOTE: When you double click Intrigue, macOS will complain that this app is from an unidentified developer. So instead, please use Right-click > Open to open Intrigue for the first time.
