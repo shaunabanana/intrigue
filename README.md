@@ -7,7 +7,7 @@
   <a href="https://github.com/shaunabanana/intrigue/releases/tag/v0.1.5">Download Demo (v0.1.5)</a> | <a href="https://github.com/shaunabanana/intrigue/issues">Report Bugs</a>
 </p>
 
-> Development is underway for a web-based version, with P2P collaborative editing!
+> Binaries now available for Windows, macOS, and Linux. Development is underway for a web-based version, with P2P collaborative editing!
 
 ## What is this?
 Intrigue lets you quickly organize the papers you read alongside your thoughts in a visual & clean manner.
