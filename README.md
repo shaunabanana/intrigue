@@ -7,7 +7,7 @@
   <a href="https://github.com/shaunabanana/intrigue/releases/tag/v0.1.5">Download Demo (v0.1.5)</a> | <a href="https://github.com/shaunabanana/intrigue/issues">Report Bugs</a>
 </p>
 
-> NOTE: When you double click Intrigue, macOS will complain that this app is from an unidentified developer. So instead, please use Right-click > Open to open Intrigue for the first time.
+> Development is underway for a web-based version, with P2P collaborative editing!
 
 ## What is this?
 Intrigue lets you quickly organize the papers you read alongside your thoughts in a visual & clean manner.
