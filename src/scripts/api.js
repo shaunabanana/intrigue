@@ -179,6 +179,12 @@ export async function createWindow(filePath) {
         }
     });
 
+    win.webContents.setWindowOpenHandler(function(event) {
+        // console.log(e, url);
+        // e.preventDefault();
+        require('electron').shell.openExternal(event.url);
+    });
+
     win.once('close', (e) => {
         if (win.documentEdited) {
             e.preventDefault();

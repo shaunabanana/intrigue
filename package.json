@@ -1,7 +1,9 @@
 {
   "name": "intrigue",
   "productName": "Intrigue",
-  "version": "0.1.5",
+  "version": "0.1.6",
+  "author": "Shengchen Zhang <shengchenzhang1207@gmail.com> [https://shengchen.design/]",
+  "description": "Organize literature into ideas, fast.",
   "private": true,
   "scripts": {
     "serve": "vue-cli-service serve",
@@ -15,6 +17,7 @@
   "main": "background.js",
   "dependencies": {
     "@citation-js/plugin-isbn": "^0.3.0",
+    "@tiptap/extension-link": "^2.0.0-beta.38",
     "@tiptap/starter-kit": "*",
     "@tiptap/vue-2": "*",
     "axios": "^0.21.1",

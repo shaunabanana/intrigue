@@ -14,6 +14,24 @@
 <script>
 import { Editor, EditorContent } from "@tiptap/vue-2";
 import StarterKit from "@tiptap/starter-kit";
+import Link from '@tiptap/extension-link'
+
+const CustomLink = Link.extend({
+    addKeyboardShortcuts() {
+        return {
+            'Mod-k': () => {
+                const { view, state } = this.editor
+                const { from, to } = view.state.selection
+                const selection = state.doc.textBetween(from, to, '')
+                // console.log(selection);
+                this.editor.commands.toggleLink({ 
+                    href: selection, 
+                    target: '_blank' 
+                });
+            },
+        }
+    },
+})
 
 const doi = require('doi-regex');
 const Cite = require('citation-js');
@@ -48,7 +66,12 @@ export default {
     mounted() {
         this.editor = new Editor({
             content: this.data.content,
-            extensions: [StarterKit],
+            extensions: [
+                StarterKit,
+                CustomLink.configure({
+                    protocols: ['zotero']
+                })
+            ],
             editable: this.editing,
             autofocus: this.editing
         });
