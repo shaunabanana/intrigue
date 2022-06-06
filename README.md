@@ -4,7 +4,9 @@
 <h3 align="center">Intrigue</h3>
 <p align="center">Organize literature into ideas, fast.</p>
 <p align="center">
-  <a href="https://github.com/shaunabanana/intrigue/releases/tag/v0.1.5">Download Demo (v0.1.5)</a> | <a href="https://github.com/shaunabanana/intrigue/issues">Report Bugs</a>
+  <a href="https://github.com/shaunabanana/intrigue/releases/tag/v0.1.5">Download Demo (v0.1.5)</a> | 
+  <a href="https://github.com/shaunabanana/intrigue/issues">Report Bugs</a> | 
+  <a href="https://discord.gg/PEVwFEmf7P">Join Discord</a>
 </p>
 
 > Binaries now available for Windows, macOS, and Linux. Development is underway for a web-based version, with P2P collaborative editing!
