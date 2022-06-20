@@ -11,9 +11,10 @@
         @scroll="panCanvas"
         @pinch="zoomCanvas"
         @dblclick="newNode"
+        @keydown.space.prevent
     >
-        <div class="viewport">
-            <Node
+        <div class="viewport" @keydown.space.prevent>
+            <IntrigueNode
                 v-for="node in store.value.nodes"
                 :key="node.id"
                 :ref="node.id"
@@ -21,6 +22,15 @@
                 :selected="selection.some((t) => t.id === node.id)"
                 @dblclick.stop="editNode(node)"
                 @update-dimensions="$refs.moveable.updateRect"
+            />
+
+            <IntrigueLink
+                v-for="link in store.value.links"
+                :key="link.id"
+                :ref="link.id"
+                :source="link.source"
+                :target="link.target"
+                :text="test"
             />
 
             <!-- <div v-for="user in document.users" :key="user.id">
@@ -69,7 +79,7 @@
 </template>
 
 <script>
-import { defineComponent } from 'vue';
+import { defineComponent, computed } from 'vue';
 
 import { VueInfiniteViewer } from 'vue3-infinite-viewer';
 import Moveable from 'vue3-moveable';
@@ -80,7 +90,8 @@ import { nanoid } from 'nanoid';
 import { NodeTypes } from '@/store';
 import Keyboard from '@/keyboard';
 
-import Node from '@/components/canvas/Node.vue';
+import IntrigueNode from '@/components/canvas/Node.vue';
+import IntrigueLink from '@/components/canvas/Link.vue';
 // import Cursor from '@/components/canvas/Cursor.vue';
 
 export default defineComponent({
@@ -90,8 +101,17 @@ export default defineComponent({
         VueInfiniteViewer,
         Moveable,
         VueSelecto,
-        Node,
+        IntrigueNode,
+        IntrigueLink,
         // Cursor,
+    },
+
+    provide() {
+        return {
+            x: computed(() => this.x),
+            y: computed(() => this.y),
+            zoom: computed(() => this.zoom),
+        };
     },
 
     data() {
@@ -123,6 +143,11 @@ export default defineComponent({
                 type: 'create node',
                 node: nodeId,
             });
+            if (Object.keys(this.store.value.nodes).length === 2) {
+                const [source, target] = Object.keys(this.store.value.nodes);
+                this.document.commit('createLink', { source, target });
+                // arrowLine(`[id="${nodeIds[0]}"]`, `[id="${nodeIds[1]}"]`);
+            }
         },
 
         editNode(node) {
@@ -300,7 +325,6 @@ export default defineComponent({
                     },
                 });
             }
-            console.log(this.selection);
             this.send('stop dragging');
         },
 
@@ -392,7 +416,10 @@ export default defineComponent({
         startPanning(event) {
             console.log('Space pressed', event);
             this.send('space pressed');
-            if (!this.editing) event.preventDefault();
+            if (!this.editing) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
         },
 
         stopPanning(event) {

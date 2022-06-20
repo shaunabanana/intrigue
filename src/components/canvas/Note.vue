@@ -35,7 +35,9 @@ export default defineComponent({
             extensions: [
                 StarterKit,
                 Highlight,
-                Link,
+                Link.configure({
+                    protocols: ['zotero'],
+                }),
             ],
             autofocus: this.editing,
             editable: this.editing,

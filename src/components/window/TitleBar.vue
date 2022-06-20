@@ -2,7 +2,9 @@
     <div class="titlebar-container">
         <a-row v-if="electron" class="window noselect" justify="center" align="center">
             <a-col :span="8"  align="center" :offset="8">Running in Electron.</a-col>
-            <a-col :span="8" align="right" style="padding-right: 1rem">Share</a-col>
+            <a-col :span="8" align="right" style="padding-right: 0.5rem">
+                <CopyButton size="mini" text="something">Share</CopyButton>
+            </a-col>
         </a-row>
 
         <a-row v-else class="browser" justify="center" align="center">
@@ -13,9 +15,14 @@
 
 <script>
 import isElectron from 'is-electron';
+import CopyButton from './CopyButton.vue';
 
 export default {
     name: 'TitleBar',
+
+    components: {
+        CopyButton,
+    },
 
     data() {
         return {
