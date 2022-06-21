@@ -42,7 +42,7 @@ import { defineComponent } from 'vue';
 import { NodeTypes } from '@/store';
 
 import Note from '@/components/canvas/Note.vue';
-// import { checkLiteratureInfo } from '@/literature';
+import { checkLiteratureInfo } from '@/literature';
 
 export default defineComponent({
     name: 'IntrigueNode',
@@ -124,19 +124,19 @@ export default defineComponent({
             });
         },
 
-        parseNoteContent() {
-        // parseNoteContent(content) {
-            // const literature = checkLiteratureInfo(content);
-            // if (literature) {
-            //     console.log(literature, NodeTypes.Literature);
-            //     this.document.commit('updateNode', {
-            //         id: this.node.id,
-            //         set: {
-            //             type: NodeTypes.Reference,
-            //             identifier: literature.identifier,
-            //         },
-            //     });
-            // }
+        // parseNoteContent() {
+        parseNoteContent(content) {
+            const literature = checkLiteratureInfo(content);
+            if (literature) {
+                console.log(literature, NodeTypes.Literature);
+                this.document.commit('updateNode', {
+                    id: this.node.id,
+                    set: {
+                        type: NodeTypes.Reference,
+                        identifier: literature.identifier,
+                    },
+                });
+            }
         },
     },
 
@@ -220,16 +220,20 @@ export default defineComponent({
     },
 
     watch: {
+        // eslint-disable-next-line func-names
         'node.currentX': function () {
             // console.log('node.currentX changed', this.node.id);
             this.x = this.node.currentX;
         },
+        // eslint-disable-next-line func-names
         'node.currentY': function () {
             this.y = this.node.currentY;
         },
+        // eslint-disable-next-line func-names
         'node.currentWidth': function () {
             this.w = this.node.currentWidth;
         },
+        // eslint-disable-next-line func-names
         'node.x': function () {
             // console.log('node.x changed', this.node.id);
             this.document.updateNode({
@@ -237,18 +241,21 @@ export default defineComponent({
                 set: { currentX: this.node.x },
             });
         },
+        // eslint-disable-next-line func-names
         'node.y': function () {
             this.document.updateNode({
                 id: this.node.id,
                 set: { currentY: this.node.y },
             });
         },
+        // eslint-disable-next-line func-names
         'node.w': function () {
             this.document.updateNode({
                 id: this.node.id,
                 set: { currentWidth: this.node.w },
             });
         },
+        // eslint-disable-next-line func-names
         'node.parent': function () {
             if (this.node.parent) {
                 this.parent = this.store.value.nodes[this.node.parent];
@@ -282,6 +289,11 @@ export default defineComponent({
     word-wrap: break-word;
     /* background: var(--bg-color); */
     cursor: text;
+}
+
+.reference {
+    background: rgb(203, 227, 250);
+    border: 1px solid rgb(91, 169, 247);
 }
 
 .selected {
@@ -323,12 +335,6 @@ export default defineComponent({
 .note.middle {
     border-radius: 0;
 } */
-
-.reference {
-    /* background: var(--va-danger) !important; */
-    color: white !important;
-    font-weight: bold !important;
-}
 
 /* .node:before {
     content: " ";
