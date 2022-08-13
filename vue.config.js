@@ -25,6 +25,13 @@ module.exports = defineConfig({
             nodeIntegration: true,
             contextIsolation: false,
             builderOptions: {
+                productName: 'Intrigue',
+                appId: 'design.shengchen.intrigue',
+                afterSign: 'electron-builder-notarize',
+                mac: {
+                    hardenedRuntime: true,
+                    entitlements: './node_modules/electron-builder-notarize/entitlements.mac.inherit.plist',
+                },
                 fileAssociations: [
                     {
                         ext: 'intrigue',
