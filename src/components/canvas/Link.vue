@@ -1,24 +1,21 @@
 <template>
-    <svg
-        style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh"
-        width="100vw"
-        height="100vh"
-        xmlns="http://www.w3.org/2000/svg"
-    >
-        <path ref="arrow"
-            style="cursor: pointer"
-            :d="`M ${sx} ${sy} C ${c1x} ${c1y}, ${c2x} ${c2y}, ${ex} ${ey}`"
-            :stroke="color"
-            :strokeWidth="arrowHeadSize / 2"
-            fill="none"
-        />
-        <polygon
-            :points="`0,${-arrowHeadSize} ${arrowHeadSize *
-            2},0, 0,${arrowHeadSize}`"
-            :transform="`translate(${ex}, ${ey}) rotate(${ae})`"
-            fill={color}
-        />
-    </svg>
+    <teleport to="#links">
+        <g ref="arrow" style="pointer-events: auto">
+            <path
+                style="cursor: pointer"
+                :d="`M ${sx} ${sy} C ${c1x} ${c1y}, ${c2x} ${c2y}, ${ex} ${ey}`"
+                :stroke="color"
+                :stroke-width="arrowHeadSize / 3 * zoom.value"
+                fill="none"
+            />
+            <polygon
+                :points="`0,${-arrowHeadSize * zoom.value} ${arrowHeadSize *
+                2 * zoom.value},0, 0,${arrowHeadSize * zoom.value}`"
+                :transform="`translate(${ex}, ${ey}) rotate(${ae})`"
+                :fill="color"
+            />
+        </g>
+    </teleport>
 </template>
 
 <script>
@@ -107,19 +104,23 @@ export default {
                 { padEnd: this.arrowHeadSize },
             );
 
-            this.sx = sx;
-            this.sy = sy;
-            this.c1x = c1x;
-            this.c1y = c1y;
-            this.c2x = c2x;
-            this.c2y = c2y;
-            this.ex = ex;
-            this.ey = ey;
+            this.sx = this.mapX(sx);
+            this.sy = this.mapY(sy);
+            this.c1x = this.mapX(c1x);
+            this.c1y = this.mapY(c1y);
+            this.c2x = this.mapX(c2x);
+            this.c2y = this.mapY(c2y);
+            this.ex = this.mapX(ex);
+            this.ey = this.mapY(ey);
             this.ae = ae;
         },
 
-        map(value) {
-            return value / this.zoom.value + this.x.value;
+        mapX(value) {
+            return (value - this.x.value) * this.zoom.value;
+        },
+
+        mapY(value) {
+            return (value - this.y.value) * this.zoom.value;
         },
 
         getBoundingBox(element, data) {
@@ -138,9 +139,9 @@ export default {
             // const centerY = element.offsetTop + element.offsetHeight / 2;
 
             return {
-                x: data ? data.currentX : this.map(rect.x),
-                y: data ? data.currentY : this.map(rect.y),
-                w: data ? data.currentWidth + paddingX : this.map(rect.width),
+                x: data ? data.currentX : rect.x / this.zoom.value + this.x.value,
+                y: data ? data.currentY : rect.y / this.zoom.value + this.y.value,
+                w: data ? data.currentWidth + paddingX : rect.width / this.zoom.value,
                 h: element.offsetHeight - 2,
             };
         },

@@ -80,6 +80,10 @@
                 />
             </div>
         </vue-infinite-viewer>
+        <svg class="links" id="links"
+            xmlns="http://www.w3.org/2000/svg"
+        />
+    >
     </div>
 </template>
 
@@ -501,5 +505,15 @@ export default defineComponent({
     background-image: radial-gradient(var(--color-neutral-3) 10%, transparent 10%);
     /* background-size: 15px 15px; */
     /* background-position: center; */
+}
+
+svg.links {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    pointer-events: none;
+    /* background: red; */
 }
 </style>
