@@ -2,7 +2,7 @@
     <TitleBar />
     <DocumentCanvas />
     <PointerTracker />
-    <Debug />
+    <!-- <Debug /> -->
 </template>
 
 <script>
@@ -20,7 +20,7 @@ import { useMachine } from '@xstate/vue';
 import TitleBar from '@/components/window/TitleBar.vue';
 import DocumentCanvas from '@/components/canvas/Canvas.vue';
 import PointerTracker from '@/components/canvas/PointerTracker.vue';
-import Debug from '@/components/utils/Debug.vue';
+// import Debug from '@/components/utils/Debug.vue';
 
 export default {
     name: 'App',
@@ -28,7 +28,7 @@ export default {
         TitleBar,
         DocumentCanvas,
         PointerTracker,
-        Debug,
+        // Debug,
     },
 
     data() {
