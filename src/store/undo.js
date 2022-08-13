@@ -7,6 +7,9 @@ export default class ReversibleDocument extends SyncedDocument {
         this.inverses = {};
         this.undoStack = [];
         this.redoStack = [];
+
+        this.previousTime = -1;
+        this.captureTimeout = 50;
     }
 
     registerInverses(actionA, actionB) {
@@ -29,38 +32,58 @@ export default class ReversibleDocument extends SyncedDocument {
 
         if (!inverseParams) return;
 
-        this.undoStack.push({ action, inverseParams });
-        console.log({ action, inverseParams });
+        const currentTime = Date.now();
+        if (Math.abs(currentTime - this.previousTime) < this.captureTimeout) {
+            console.log('[Undo][Commit] Capturing.');
+            // If the previous item is not in an array, then put it inside one.
+            if (!Array.isArray(this.undoStack[this.undoStack.length - 1])) {
+                this.undoStack[this.undoStack.length - 1] = [
+                    this.undoStack[this.undoStack.length - 1],
+                ];
+            }
+            this.undoStack[this.undoStack.length - 1].push({ action, inverseParams });
+        } else {
+            this.undoStack.push({ action, inverseParams });
+        }
+        this.previousTime = currentTime;
+        // console.log(`[Undo][Commit] ${JSON.stringify(this.undoStack, null, 2)}`);
+
         this.redoStack = [];
     }
 
     popStackItem(fromStack, toStack) {
         if (fromStack.length <= 0) return;
-        const item = fromStack.pop();
-        if (!item) return;
+        let lastRecord = fromStack.pop();
+        if (!lastRecord) return;
 
-        const inverseAction = this.inverses[item.action];
-        if (!inverseAction) {
-            console.error(`There is no registered inverse for ${item.action}().`);
-            return;
-        }
+        if (!Array.isArray(lastRecord)) lastRecord = [lastRecord];
 
-        let inverseParams;
+        const toStackRecord = [];
+        lastRecord.reverse().forEach((item) => {
+            const inverseAction = this.inverses[item.action];
+            if (!inverseAction) {
+                console.error(`There is no registered inverse for ${item.action}().`);
+                return;
+            }
 
-        // eslint-disable-next-line
-        const actionFunction = this[inverseAction].bind(this);
+            let inverseParams;
 
-        if (actionFunction !== undefined) {
-            inverseParams = actionFunction(item.inverseParams);
-        } else {
-            console.error(`There is no method called ${inverseAction}() on this object:`, this);
-            return;
-        }
+            // eslint-disable-next-line
+            const actionFunction = this[inverseAction].bind(this);
 
-        toStack.push({
-            action: inverseAction,
-            inverseParams,
+            if (actionFunction !== undefined) {
+                inverseParams = actionFunction(item.inverseParams);
+            } else {
+                console.error(`There is no method called ${inverseAction}() on this object:`, this);
+            }
+
+            toStackRecord.push({
+                action: inverseAction,
+                inverseParams,
+            });
         });
+
+        toStack.push(toStackRecord.length === 1 ? toStackRecord[0] : toStackRecord);
     }
 
     undo() {
