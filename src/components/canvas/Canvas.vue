@@ -1,84 +1,86 @@
 <template>
-    <vue-infinite-viewer
-        class="canvas"
-        ref="canvas"
-        :style="{
-            'background-position': `${-x * zoom}px ${-y * zoom}px`,
-            'background-size': `${13 * zoom}px ${13 * zoom}px`,
-            '--resize-handle-height': `${activeNodeHeight}px`,
-        }"
-        :maxPinchWheel="10"
-        @scroll="panCanvas"
-        @pinch="zoomCanvas"
-        @dblclick="newNode"
-    >
-        <div class="viewport">
-            <IntrigueNode
-                v-for="node in store.value.nodes"
-                :key="node.id"
-                :ref="node.id"
-                :node="node"
-                :selected="selection.some((t) => t.id === node.id)"
-                @dblclick.stop="doubleClickNode(node)"
-                @update-dimensions="$refs.moveable.updateRect"
-            />
-
-            <IntrigueLink
-                v-for="link in store.value.links"
-                :key="link.id"
-                :ref="link.id"
-                :source="link.source"
-                :target="link.target"
-            />
-
-            <IntrigueLink
-                v-if="linking.value"
-                :source="linking.value"
-                target="pointer-location"
-            />
-
-            <!-- <div v-for="user in document.users" :key="user.id">
-                <Cursor
-                    v-if="document.localUser.id !== user.id"
-                    :id="user.id"
-                    :name="user.name"
-                    :x="user.cursorX"
-                    :y="user.cursorY"
+    <div style="width: 100%; height: 100%;">
+        <vue-infinite-viewer
+            class="canvas"
+            ref="canvas"
+            :style="{
+                'background-position': `${-x * zoom}px ${-y * zoom}px`,
+                'background-size': `${13 * zoom}px ${13 * zoom}px`,
+                '--resize-handle-height': `${activeNodeHeight}px`,
+            }"
+            :maxPinchWheel="10"
+            @scroll="panCanvas"
+            @pinch="zoomCanvas"
+            @dblclick="newNode"
+        >
+            <div class="viewport">
+                <IntrigueLink
+                    v-for="link in store.value.links"
+                    :key="link.id"
+                    :ref="link.id"
+                    :source="link.source"
+                    :target="link.target"
                 />
-            </div> -->
 
-            <Moveable
-                ref="moveable"
-                className="moveable"
-                :target="selection"
-                :draggable="true"
-                :resizable="shouldResize"
-                :renderDirections="['e']"
-                @clickGroup="cancelSelectionWhenClickEmpty"
-                @drag="dragNodes"
-                @dragGroup="dragNodes"
-                @dragEnd="commitNodePositions"
-                @dragGroupEnd="commitNodePositions"
-                @resize="resizeNode"
-                @resizeEnd="commitNodeSize"
-            />
+                <IntrigueLink
+                    v-if="linking.value"
+                    :source="linking.value"
+                    target="pointer-location"
+                />
 
-            <VueSelecto
-                ref="selecto"
-                dragContainer=".canvas"
-                :selectableTargets="['.node.selectable']"
-                :selectByClick="true"
-                :selectFromInside="false"
-                :toggleContinueSelect="['shift']"
-                :keyContainer="window"
-                :hitRate="0"
-                :ratio="0"
-                @dragStart="preventSelectionWhenDragging"
-                @select="selectNode"
-                @selectEnd="commitSelections"
-            />
-        </div>
-    </vue-infinite-viewer>
+                <IntrigueNode
+                    v-for="node in store.value.nodes"
+                    :key="node.id"
+                    :ref="node.id"
+                    :node="node"
+                    :selected="selection.some((t) => t.id === node.id)"
+                    @dblclick.stop="doubleClickNode(node)"
+                    @update-dimensions="$refs.moveable.updateRect"
+                />
+
+                <!-- <div v-for="user in document.users" :key="user.id">
+                    <Cursor
+                        v-if="document.localUser.id !== user.id"
+                        :id="user.id"
+                        :name="user.name"
+                        :x="user.cursorX"
+                        :y="user.cursorY"
+                    />
+                </div> -->
+
+                <Moveable
+                    ref="moveable"
+                    className="moveable"
+                    :target="selection"
+                    :draggable="true"
+                    :resizable="shouldResize"
+                    :renderDirections="['e']"
+                    @clickGroup="cancelSelectionWhenClickEmpty"
+                    @drag="dragNodes"
+                    @dragGroup="dragNodes"
+                    @dragEnd="commitNodePositions"
+                    @dragGroupEnd="commitNodePositions"
+                    @resize="resizeNode"
+                    @resizeEnd="commitNodeSize"
+                />
+
+                <VueSelecto
+                    ref="selecto"
+                    dragContainer=".canvas"
+                    :selectableTargets="['.node.selectable']"
+                    :selectByClick="true"
+                    :selectFromInside="false"
+                    :toggleContinueSelect="['shift']"
+                    :keyContainer="window"
+                    :hitRate="0"
+                    :ratio="0"
+                    @dragStart="preventSelectionWhenDragging"
+                    @select="selectNode"
+                    @selectEnd="commitSelections"
+                />
+            </div>
+        </vue-infinite-viewer>
+    </div>
 </template>
 
 <script>
