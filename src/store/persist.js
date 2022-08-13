@@ -43,7 +43,7 @@ export default class LocalFilePersistence extends EventEmitter {
         this.doc.on('update', this.storeUpdate.bind(this));
     }
 
-    storeUpdate(_, callback) {
+    storeUpdate() {
         if (this.timeout) {
             clearTimeout(this.timeout);
             this.timeout = null;
@@ -54,7 +54,7 @@ export default class LocalFilePersistence extends EventEmitter {
             console.log('[LocalFilePersistence][storeUpdate] Saving to disk.');
             console.log(encodeStateAsUpdate(this.doc));
             this.writeFile(this.filePath, encodeStateAsUpdate(this.doc)).then(() => {
-                if (callback) callback();
+                // if (callback) callback();
                 this.emit('saved');
             });
         }, this.debounce);
