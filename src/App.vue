@@ -1,11 +1,13 @@
 <template>
     <TitleBar />
     <DocumentCanvas />
+    <PointerTracker />
     <Debug />
 </template>
 
 <script>
 import { computed } from 'vue';
+import isElectron from 'is-electron';
 
 // import Avatar from 'vue-boring-avatars';
 
@@ -16,8 +18,8 @@ import intrigueMachine from '@/state';
 import { useMachine } from '@xstate/vue';
 
 import TitleBar from '@/components/window/TitleBar.vue';
-
 import DocumentCanvas from '@/components/canvas/Canvas.vue';
+import PointerTracker from '@/components/canvas/PointerTracker.vue';
 import Debug from '@/components/utils/Debug.vue';
 
 export default {
@@ -25,14 +27,12 @@ export default {
     components: {
         TitleBar,
         DocumentCanvas,
+        PointerTracker,
         Debug,
     },
 
     data() {
-        const queryString = window.location.search;
-        const urlParams = new URLSearchParams(queryString);
-        console.log(urlParams.get('document'));
-        const document = urlParams.has('document') ? new IntrigueDocument(urlParams.get('document')) : new IntrigueDocument();
+        const document = new IntrigueDocument();
 
         return {
             document,
@@ -40,6 +40,8 @@ export default {
             users: [],
             loading: true,
             title: '',
+            docId: undefined,
+            filePath: undefined,
         };
     },
 
@@ -50,6 +52,7 @@ export default {
             store: computed(() => this.document.store),
             state: computed(() => this.state),
             send: this.send,
+            filePath: computed(() => this.filePath),
         };
 
         Object.keys(this.state.context).forEach((key) => {
@@ -60,6 +63,13 @@ export default {
     },
 
     setup() {
+        if (isElectron()) {
+            // eslint-disable-next-line global-require
+            const log = require('electron-log');
+            Object.assign(console, log.functions);
+            log.catchErrors();
+        }
+
         const { state, send } = useMachine(intrigueMachine);
         return { state, send };
     },
@@ -69,29 +79,63 @@ export default {
             const fruit = getRandomFruitsName('en', { maxWords: 1 });
             this.document.updateAwareness('name', `Anonymous ${fruit}`);
         },
-
-        onPinch(event) {
-            console.log(event.zoom);
-        },
     },
 
     mounted() {
         this.document.on('synced', () => {
             this.broadcastUsername();
             this.loading = false;
-            // if (this.$route.params.title) {
-            //     this.store.metadata.name = this.$route.params.title;
-            //     this.title = this.$route.params.title;
-            // } else {
-            //     this.title = this.store.metadata.name;
-            // }
         });
+
+        this.document.on('commit', () => {
+            if (isElectron()) {
+                // eslint-disable-next-line import/no-extraneous-dependencies, global-require
+                const { ipcRenderer } = require('electron');
+                ipcRenderer.send('set-edited', true);
+            }
+        });
+
+        this.document.on('saved', () => {
+            if (isElectron()) {
+                // eslint-disable-next-line import/no-extraneous-dependencies, global-require
+                const { ipcRenderer } = require('electron');
+                ipcRenderer.send('set-edited', false);
+            }
+        });
+
+        // Prevent space from causing scrolling down behavior.
+        window.addEventListener('keydown', (event) => {
+            if (event.code === 'Space' && event.target === document.body) {
+                event.preventDefault();
+            }
+        });
+
+        if (isElectron()) {
+            // eslint-disable-next-line import/no-extraneous-dependencies, global-require
+            const { ipcRenderer } = require('electron');
+            ipcRenderer.on('new-file', () => {
+                console.log('[App][ipcRenderer@set-filepath] This is a new empty file.');
+                this.document.initSync();
+            });
+
+            ipcRenderer.on('set-filepath', (_, filePath) => {
+                console.log(`[App][ipcRenderer@set-filepath] filePath is ${filePath}.`);
+                this.filePath = filePath;
+                this.document.initPersistence(filePath);
+            });
+        } else {
+            const queryString = window.location.search;
+            const urlParams = new URLSearchParams(queryString);
+            console.log(`[App][mounted] urlParams.document is ${urlParams.get('document')}`);
+            this.document.initSync(urlParams.get('document'));
+            this.document.initPersistence(this.document.store.id);
+        }
     },
 
     beforeUnmount() {
-        console.log('Closing document...');
+        console.log('[App][beforeUnmount] Closing document...');
         this.document.close();
-        console.log('Document closed.');
+        console.log('[App][beforeUnmount] Document closed.');
     },
 
     watch: {

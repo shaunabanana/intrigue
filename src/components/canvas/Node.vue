@@ -23,7 +23,6 @@
         @mouseleave="onMouseLeave"
         @focusout="onMouseLeave"
     >
-        <!-- <va-card-content class="content"> -->
         <note
             v-if="isNote"
             :id="node.id"
@@ -31,9 +30,24 @@
             :editing="editing.value === node.id"
             @change="parseNoteContent"
         />
-        {{ node.identifier }}
-            <!-- <p style="font-size: 12px; color: lightgray">{{node}}</p> -->
-        <!-- </va-card-content> -->
+
+        <reference
+            v-if="isReference"
+            :id="node.id"
+            :type="node.referenceType"
+            :identifier="node.identifier"
+            :title="node.title"
+            :author="node.author"
+        />
+
+        <button class="link-button" v-if="showLinkButton"
+            @mousedown.stop
+            @mouseup.stop
+            @dblclick.stop
+            @click.stop="onLinkButtonClick"
+        >
+            <icon-link/>
+        </button>
     </div>
 </template>
 
@@ -41,14 +55,16 @@
 import { defineComponent } from 'vue';
 import { NodeTypes } from '@/store';
 
-import Note from '@/components/canvas/Note.vue';
-import { checkLiteratureInfo } from '@/literature';
+import Note from '@/components/canvas/node/Note.vue';
+import Reference from '@/components/canvas/node/Reference.vue';
+import { extractIdentifier, fetchLiteratureInfo } from '@/literature';
 
 export default defineComponent({
     name: 'IntrigueNode',
     inject: ['document', 'store', 'state', 'send', 'editing', 'dragging', 'dropping', 'selection'],
     components: {
         Note,
+        Reference,
     },
     props: {
         node: {
@@ -85,6 +101,10 @@ export default defineComponent({
                 type: 'drop leave',
                 node: this.node.id,
             });
+        },
+
+        onLinkButtonClick() {
+            this.send('start linking', { node: this.node.id });
         },
 
         observeParent() {
@@ -124,17 +144,30 @@ export default defineComponent({
             });
         },
 
-        // parseNoteContent() {
         parseNoteContent(content) {
-            const literature = checkLiteratureInfo(content);
-            if (literature) {
-                console.log(literature, NodeTypes.Literature);
+            const identifier = extractIdentifier(content);
+            if (identifier) {
+                console.log(`[Node][parseNoteContent@extractIdentifier] ${identifier}`);
                 this.document.commit('updateNode', {
                     id: this.node.id,
                     set: {
                         type: NodeTypes.Reference,
-                        identifier: literature.identifier,
+                        identifier: identifier.identifier,
+                        referenceType: identifier.type,
                     },
+                });
+
+                fetchLiteratureInfo(identifier.type, identifier.identifier).then((info) => {
+                    console.log(`[Node][parseNoteContent@fetchLiteratureInfo] ${info}`);
+                    this.document.commit('updateNode', {
+                        id: this.node.id,
+                        set: {
+                            title: info.title,
+                            author: info.author,
+                            identifier: info.identifier ? info.identifier : identifier.identifier,
+                            record: info,
+                        },
+                    });
                 });
             }
         },
@@ -162,13 +195,13 @@ export default defineComponent({
     },
 
     breforeUnmount() {
-        console.log('Unmounting', this.node.id);
+        console.log('[Node][breforeUnmount] Unmounting', this.node.id);
         this.observer.disconnect();
         this.parentWatchers.forEach((removeParentWatcher) => removeParentWatcher());
     },
 
     deactivated() {
-        console.log('Unmounting', this.node.id);
+        console.log('[Node][deactivated] Deactivated', this.node.id);
         this.observer.disconnect();
         this.parentWatchers.forEach((removeParentWatcher) => removeParentWatcher());
     },
@@ -216,6 +249,12 @@ export default defineComponent({
                 return index + 2;
             }
             return index;
+        },
+
+        showLinkButton() {
+            if (this.selection.value.length !== 1) return false;
+            if (!this.selection.value.includes(this.node.id)) return false;
+            return true;
         },
     },
 
@@ -289,6 +328,31 @@ export default defineComponent({
     word-wrap: break-word;
     /* background: var(--bg-color); */
     cursor: text;
+    z-index: 1;
+}
+
+.link-button {
+    position: absolute;
+    /* top: calc(50% - 0.5rem); */
+    top: -0.9rem;
+    left: calc(100% - 0.1rem);
+    padding: 0.1rem;
+    padding-left: 0.2rem;
+    padding-right: 0.2rem;
+    border-radius: var(--node-corner);
+    border: 0px transparent;
+    background: rgb(255, 112, 143);
+    color: white;
+    cursor: pointer;
+    z-index: 100 !important;
+}
+
+.link-button:hover {
+    background: rgb(255, 137, 163);
+}
+
+.link-button:active {
+    background: rgb(255, 112, 143);
 }
 
 .reference {
@@ -314,39 +378,6 @@ export default defineComponent({
     border-radius: 0 0 var(--node-corner) var(--node-corner);
 }
 
-/* .note.selected {
-    margin: 1px;
-    border: 2px solid rgb(255, 112, 143);
-}
-
-.note.dragndrop {
-    margin: 1px;
-    border: 2px solid rgb(231, 165, 104);
-}
-
-.note.editing {
-    cursor: text;
-}
-
-.note.top {
-    border-radius: 1rem 1rem 0 0;
-}
-
-.note.middle {
-    border-radius: 0;
-} */
-
-/* .node:before {
-    content: " ";
-    position: absolute;
-    width: 100%;
-    height: 100%;
-    border-radius: var(--va-card-border-radius,var(--va-block-border-radius));
-    background: white;
-    z-index: -100;
-    box-shadow: var(--va-card-box-shadow,var(--va-block-box-shadow));
-} */
-
 .noselect {
     -webkit-touch-callout: none; /* iOS Safari */
     -webkit-user-select: none; /* Safari */
@@ -368,15 +399,14 @@ export default defineComponent({
 
 .dropping {
     margin: -2px;
-    border: 2px solid;
-    border-color: var(--va-warning) !important;
+    border-width: 2px;
     z-index: 0;
 }
 
 .remote-selected {
     margin: -2px;
     border: 2px solid;
-    border-color: var(--va-secondary) !important;
+    border-color: gray !important;
     pointer-events: none;
 }
 

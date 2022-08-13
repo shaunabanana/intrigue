@@ -75,7 +75,7 @@ export default defineComponent({
         editing() {
             this.editor.setEditable(this.editing);
             if (this.editing) {
-                console.log('Editing: ', this.editing, this.id);
+                console.log(`[Note][watch@editing] Editing: ${this.editing}, ${this.id}`);
                 this.editor.commands.focus('end');
             } else {
                 this.editor.commands.blur();

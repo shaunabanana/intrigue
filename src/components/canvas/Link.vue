@@ -1,4 +1,5 @@
 <script>
+import { nextTick } from 'vue';
 import LeaderLine from 'leader-line';
 
 export default {
@@ -14,37 +15,53 @@ export default {
             type: String,
             required: true,
         },
-        text: String,
+        text: {
+            type: String,
+            default: '',
+        },
     },
 
     data() {
         const sourceElement = document.querySelector(`[id="${this.source}"]`);
         const targetElement = document.querySelector(`[id="${this.target}"]`);
 
+        const sourceNode = this.store.value.nodes[this.source];
+        const targetNode = this.store.value.nodes[this.target];
+        if (!targetNode) {
+            window.addEventListener('mousemove', this.updateLine);
+        }
+
         return {
             line: new LeaderLine(sourceElement, targetElement, {
                 color: 'var(--color-neutral-5)',
                 size: 1,
-                endLabel: LeaderLine.pathLabel('This is additional label', {
-                    fontSize: 12,
-                }),
+                // endLabel: LeaderLine.pathLabel(this.text, {
+                //     fontSize: 12,
+                // }),
             }),
-            sourceNode: this.store.value.nodes[this.source],
-            targetNode: this.store.value.nodes[this.target],
+            sourceNode,
+            targetNode,
         };
+    },
+
+    beforeUnmount() {
+        this.line.remove();
+        window.removeEventListener('mousemove', this.updateLine);
     },
 
     methods: {
         updateLine(resize) {
-            this.line.position();
-            if (resize) {
-                this.line.setOptions({
-                    size: this.zoom.value,
-                    endLabel: LeaderLine.pathLabel('This is additional label', {
-                        fontSize: 12 * this.zoom.value,
-                    }),
-                });
-            }
+            nextTick(() => {
+                this.line.position();
+                if (resize) {
+                    this.line.setOptions({
+                        size: this.zoom.value,
+                        endLabel: LeaderLine.pathLabel(this.text, {
+                            fontSize: 12 * this.zoom.value,
+                        }),
+                    });
+                }
+            });
         },
     },
 

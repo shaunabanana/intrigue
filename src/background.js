@@ -1,7 +1,12 @@
-import { app, protocol, BrowserWindow } from 'electron';
+/* eslint-disable import/no-extraneous-dependencies */
+import {
+    app, protocol, BrowserWindow, Menu,
+} from 'electron';
 import installExtension, { VUEJS3_DEVTOOLS } from 'electron-devtools-installer';
 
-import createWindow from '@/background/window';
+import { windowManager } from '@/desktop/window';
+import { menuTemplate } from '@/desktop/menu';
+import '@/desktop/ipc';
 
 const isDevelopment = process.env.NODE_ENV !== 'production';
 
@@ -21,7 +26,7 @@ const filesToOpen = process.argv.slice(2);
 
 app.on('open-file', (event, filePath) => {
     if (app.isReady()) {
-        createWindow(filePath);
+        windowManager.createWindow(filePath);
     } else {
         filesToOpen.push(filePath);
     }
@@ -40,7 +45,7 @@ app.on('window-all-closed', () => {
 app.on('activate', () => {
     // On macOS it's common to re-create a window in the app when the
     // dock icon is clicked and there are no other windows open.
-    if (BrowserWindow.getAllWindows().length === 0) createWindow();
+    if (BrowserWindow.getAllWindows().length === 0) windowManager.createWindow();
 });
 
 // This method will be called when Electron has finished
@@ -55,12 +60,19 @@ app.on('ready', async () => {
             console.error('Vue Devtools failed to install:', e.toString());
         }
     }
+
+    // Build menu.
+    const menu = Menu.buildFromTemplate(menuTemplate);
+    Menu.setApplicationMenu(menu);
+
+    // If there are files to open, then create new windows for them.
+    // Otherwise, just create a new empty window.
     if (filesToOpen.length > 0) {
         filesToOpen.forEach((filePath) => {
-            createWindow(filePath);
+            windowManager.createWindow(filePath);
         });
     } else {
-        createWindow();
+        windowManager.createWindow();
     }
 });
 

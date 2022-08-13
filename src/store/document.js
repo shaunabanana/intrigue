@@ -8,17 +8,14 @@ import ReversibleDocument from './undo';
 import NodeTypes from './types';
 
 export default class IntrigueDocument extends ReversibleDocument {
-    constructor(documentId) {
-        super(
-            {
-                metadata: {},
-                nodes: {},
-                links: {},
+    constructor() {
+        super({
+            metadata: {},
+            nodes: {},
+            links: {},
 
-                fragment: 'xml',
-            },
-            documentId,
-        );
+            fragment: 'xml',
+        });
 
         this.remoteSelection = reactive(new Set());
 

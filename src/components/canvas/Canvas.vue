@@ -11,16 +11,15 @@
         @scroll="panCanvas"
         @pinch="zoomCanvas"
         @dblclick="newNode"
-        @keydown.space.prevent
     >
-        <div class="viewport" @keydown.space.prevent>
+        <div class="viewport">
             <IntrigueNode
                 v-for="node in store.value.nodes"
                 :key="node.id"
                 :ref="node.id"
                 :node="node"
                 :selected="selection.some((t) => t.id === node.id)"
-                @dblclick.stop="editNode(node)"
+                @dblclick.stop="doubleClickNode(node)"
                 @update-dimensions="$refs.moveable.updateRect"
             />
 
@@ -30,7 +29,12 @@
                 :ref="link.id"
                 :source="link.source"
                 :target="link.target"
-                :text="test"
+            />
+
+            <IntrigueLink
+                v-if="linking.value"
+                :source="linking.value"
+                target="pointer-location"
             />
 
             <!-- <div v-for="user in document.users" :key="user.id">
@@ -48,7 +52,7 @@
                 className="moveable"
                 :target="selection"
                 :draggable="true"
-                :resizable="selection.length === 1 && !store.value.nodes[selection[0].id].parent"
+                :resizable="shouldResize"
                 :renderDirections="['e']"
                 @clickGroup="cancelSelectionWhenClickEmpty"
                 @drag="dragNodes"
@@ -61,13 +65,12 @@
 
             <VueSelecto
                 ref="selecto"
-                :container="$refs.canvas"
-                :dragContainer="$refs.canvas"
+                dragContainer=".canvas"
                 :selectableTargets="['.node.selectable']"
                 :selectByClick="true"
                 :selectFromInside="false"
                 :toggleContinueSelect="['shift']"
-                :keyContainer="$refs.canvas"
+                :keyContainer="window"
                 :hitRate="0"
                 :ratio="0"
                 @dragStart="preventSelectionWhenDragging"
@@ -96,7 +99,7 @@ import IntrigueLink from '@/components/canvas/Link.vue';
 
 export default defineComponent({
     name: 'IntrigueCanvas',
-    inject: ['document', 'store', 'state', 'send', 'editing', 'dragging', 'dropping', 'detaching'],
+    inject: ['document', 'store', 'state', 'send', 'editing', 'dragging', 'dropping', 'detaching', 'linking'],
     components: {
         VueInfiniteViewer,
         Moveable,
@@ -133,7 +136,7 @@ export default defineComponent({
             this.document.commit('createNode', {
                 id: nodeId,
                 type: NodeTypes.Note,
-                content: undefined,
+                content: '',
                 x: mapped.x - 14,
                 y: mapped.y - 10,
                 w: 200,
@@ -143,14 +146,14 @@ export default defineComponent({
                 type: 'create node',
                 node: nodeId,
             });
-            if (Object.keys(this.store.value.nodes).length === 2) {
-                const [source, target] = Object.keys(this.store.value.nodes);
-                this.document.commit('createLink', { source, target });
-                // arrowLine(`[id="${nodeIds[0]}"]`, `[id="${nodeIds[1]}"]`);
-            }
+            // if (Object.keys(this.store.value.nodes).length === 2) {
+            //     const [source, target] = Object.keys(this.store.value.nodes);
+            //     this.document.commit('createLink', { source, target });
+            //     // arrowLine(`[id="${nodeIds[0]}"]`, `[id="${nodeIds[1]}"]`);
+            // }
         },
 
-        editNode(node) {
+        doubleClickNode(node) {
             this.send({
                 type: 'dblclick node',
                 node: node.id,
@@ -161,14 +164,15 @@ export default defineComponent({
         deleteNodes(event) {
             if (this.editing.value) return;
             const selectedIds = this.selection.map((el) => el.id);
+            console.log(`[Canvas][deleteNodes] ${selectedIds}`);
             this.selection = [];
+            this.send('delete node');
             this.document.commit('deleteNodes', selectedIds);
             // console.log(selectedIds);
             event.preventDefault();
         },
 
         undo(event) {
-            console.log('undo');
             if (this.editing.value === null) {
                 this.document.undo();
                 event.preventDefault();
@@ -176,7 +180,6 @@ export default defineComponent({
         },
 
         redo(event) {
-            console.log('redo');
             if (this.editing.value === null) {
                 this.document.redo();
                 event.preventDefault();
@@ -290,7 +293,7 @@ export default defineComponent({
             // Note that in this case, the action to be commited is snapNode,
             // not updateNodes
             if (this.dropping.value) {
-                console.log('Dropping', this.dragging.value, 'on', this.dropping.value);
+                console.log('[Canvas][commitNodePositions] Dropping', this.dragging.value, 'on', this.dropping.value);
                 this.document.commit('snapNode', {
                     source: this.dropping.value,
                     target: this.dragging.value,
@@ -300,7 +303,7 @@ export default defineComponent({
 
             // If we're detaching half-way, then don't commit any position update and just return.
             if (this.detaching.value.length > 0) {
-                console.log('Detaching ended halfway.');
+                console.log('[Canvas][commitNodePositions] Detaching ended halfway.');
                 this.send('stop detaching');
                 return;
             }
@@ -341,6 +344,16 @@ export default defineComponent({
         },
 
         selectNode(e) {
+            if (this.linking.value) {
+                if (e.selected.length === 1 && e.selected[0].id !== this.linking.value) {
+                    console.log(`[Canvas][selectNode] Linking ${this.linking.value} to ${e.selected[0].id}`);
+                    this.document.commit('createLink', {
+                        source: this.linking.value,
+                        target: e.selected[0].id,
+                    });
+                    return;
+                }
+            }
             this.send({
                 type: 'update selection',
                 selection: e.selected.map((el) => el.id),
@@ -414,18 +427,20 @@ export default defineComponent({
         },
 
         startPanning(event) {
-            console.log('Space pressed', event);
-            this.send('space pressed');
             if (!this.editing) {
+                console.log('[Canvas][startPanning] Space pressed.', event);
+                this.send('space pressed');
                 event.preventDefault();
                 event.stopPropagation();
             }
         },
 
         stopPanning(event) {
-            console.log('Space released', event);
-            this.send('space released');
-            if (!this.editing) event.preventDefault();
+            if (!this.editing) {
+                console.log('[Canvas][startPanning] Space released.', event);
+                this.send('space released');
+                event.preventDefault();
+            }
         },
     },
 
@@ -433,6 +448,7 @@ export default defineComponent({
         activeNodeHeight() {
             if (this.selection.length > 0) {
                 const node = this.store.value.nodes[this.selection[0].id];
+                if (!node) return 0;
                 if (!node.currentHeight) return this.selection[0].clientHeight;
                 if (node.currentHeight <= 20) {
                     return node.currentHeight - 8;
@@ -441,22 +457,29 @@ export default defineComponent({
             }
             return 0;
         },
+
+        shouldResize() {
+            if (this.selection.length !== 1) return false;
+            if (!this.store.value.nodes[this.selection[0].id]) return false;
+            if (this.store.value.nodes[this.selection[0].id].parent) return false;
+            return true;
+        },
     },
 
     mounted() {
+        // Create handler to update cursor position to remote users.
+        // Don't forget to unregister upon leaving this page!
+        window.addEventListener('mousemove', this.updateCursorPosition);
+        // Register keyboard shortcuts. Need to unregister as well.
+        this.keyboard.on('keydown', 'Space', this.startPanning);
+        this.keyboard.on('keyup', 'Space', this.stopPanning);
+        this.keyboard.on('keydown', 'Backspace', this.deleteNodes);
+        this.keyboard.on('keydown', '$mod+Z', this.undo);
+        this.keyboard.on('keydown', '$mod+Shift+Z', this.redo);
+
         this.document.on('synced', () => {
             // Clear selections.
             this.document.updateAwareness('selection', []);
-
-            // Create handler to update cursor position to remote users.
-            // Don't forget to unregister upon leaving this page!
-            window.addEventListener('mousemove', this.updateCursorPosition);
-            // Register keyboard shortcuts. Need to unregister as well.
-            this.keyboard.on('keydown', 'Space', this.startPanning);
-            this.keyboard.on('keyup', 'Space', this.stopPanning);
-            this.keyboard.on('keydown', 'Backspace', this.deleteNodes);
-            this.keyboard.on('keydown', '$mod+Z', this.undo);
-            this.keyboard.on('keydown', '$mod+Shift+Z', this.redo);
         });
     },
 

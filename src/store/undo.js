@@ -1,8 +1,8 @@
 import SyncedDocument from './sync';
 
 export default class ReversibleDocument extends SyncedDocument {
-    constructor(storeStructure, documentId) {
-        super(storeStructure, documentId);
+    constructor(storeStructure) {
+        super(storeStructure);
 
         this.inverses = {};
         this.undoStack = [];
@@ -26,7 +26,7 @@ export default class ReversibleDocument extends SyncedDocument {
         if (actionFunction !== undefined) {
             inverseParams = actionFunction(params);
         } else {
-            console.error(`There is no method called ${action}() on this object:`, this);
+            console.error(`[Undo][Commit] There is no method called ${action}() on this object:`, this);
             return;
         }
 
@@ -49,6 +49,7 @@ export default class ReversibleDocument extends SyncedDocument {
         // console.log(`[Undo][Commit] ${JSON.stringify(this.undoStack, null, 2)}`);
 
         this.redoStack = [];
+        this.emit('commit');
     }
 
     popStackItem(fromStack, toStack) {

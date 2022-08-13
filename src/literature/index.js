@@ -1,8 +1,8 @@
-// import getUrls from 'get-urls';
+import * as linkify from 'linkifyjs';
 
-// const ISBN = require('isbn3')
-const doi = require('identifiers-doi');
-// const Cite = require('citation-js')
+import doi from 'identifiers-doi';
+import Cite from 'citation-js';
+import axios from 'axios';
 
 export function extractIsbn(subject) {
     // Checks for ISBN-10 or ISBN-13 format
@@ -50,7 +50,7 @@ export function extractIsbn(subject) {
     return false;
 }
 
-export function checkLiteratureInfo(content) {
+export function extractIdentifier(content) {
     // Check ISBN
     const isbnString = extractIsbn(content);
     if (isbnString) {
@@ -67,13 +67,55 @@ export function checkLiteratureInfo(content) {
             identifier: doiStrings[0],
         };
     }
-    // // Check URL
-    // const urls = getUrls(content);
-    // if (urls.size > 0) {
-    //     return {
-    //         type: 'url',
-    //         identifier: urls.values().next().value,
-    //     };
-    // }
+
+    // Check Zotero URL
+    const zotero = linkify.find(content, 'url').filter(
+        (item) => item.value.startsWith('zotero://'),
+    );
+    if (zotero.length > 0) {
+        return {
+            type: 'zotero',
+            identifier: zotero[0].href,
+        };
+    }
+
+    // Check URL
+    const urls = linkify.find(content, 'url');
+    if (urls.length > 0) {
+        return {
+            type: 'url',
+            identifier: urls[0].href,
+        };
+    }
     return false;
+}
+
+export function fetchLiteratureInfo(type, identifier) {
+    console.log(type, identifier);
+    return new Promise((resolve, reject) => {
+        if (type === 'url') {
+            axios.get(identifier).then((data) => {
+                console.log(data.request);
+                const matches = data.data.match(/<title>(.*?)<\/title>/);
+                resolve({
+                    title: matches[1],
+                    author: [{ family: 'Web link' }],
+                    identifier: data.request.responseURL,
+                });
+            }).catch((err) => {
+                reject(err);
+            });
+        } else {
+            // Handles both BibTex and DOIs.
+            // eslint-disable-next-line no-new, new-cap
+            new Cite.async(identifier, (data) => {
+                const info = data.data[0];
+                // eslint-disable-next-line no-underscore-dangle
+                delete info._graph;
+                resolve(
+                    JSON.parse(JSON.stringify(info)),
+                );
+            });
+        }
+    });
 }
