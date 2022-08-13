@@ -147,7 +147,7 @@ export default defineComponent({
         parseNoteContent(content) {
             const identifier = extractIdentifier(content);
             if (identifier) {
-                console.log(`[Node][parseNoteContent@extractIdentifier] ${identifier}`);
+                console.log(`[Node][parseNoteContent@extractIdentifier] ${JSON.stringify(identifier)}`);
                 this.document.commit('updateNode', {
                     id: this.node.id,
                     set: {
@@ -157,18 +157,41 @@ export default defineComponent({
                     },
                 });
 
-                fetchLiteratureInfo(identifier.type, identifier.identifier).then((info) => {
-                    console.log(`[Node][parseNoteContent@fetchLiteratureInfo] ${info}`);
+                if (identifier.type === 'zotero') {
                     this.document.commit('updateNode', {
                         id: this.node.id,
                         set: {
-                            title: info.title,
-                            author: info.author,
-                            identifier: info.identifier ? info.identifier : identifier.identifier,
-                            record: info,
+                            title: identifier.title,
+                            author: identifier.author,
+                            identifier: identifier.identifier,
+                            record: identifier,
                         },
                     });
-                });
+                } else if (identifier.type === 'zotero-link') {
+                    this.document.commit('updateNode', {
+                        id: this.node.id,
+                        set: {
+                            title: undefined,
+                            author: undefined,
+                            identifier: identifier.identifier,
+                            record: identifier,
+                        },
+                    });
+                } else {
+                    fetchLiteratureInfo(identifier.type, identifier.identifier).then((info) => {
+                        console.log(`[Node][parseNoteContent@fetchLiteratureInfo] ${info}`);
+                        this.document.commit('updateNode', {
+                            id: this.node.id,
+                            set: {
+                                title: info.title,
+                                author: info.author,
+                                identifier: info.identifier
+                                    ? info.identifier : identifier.identifier,
+                                record: info,
+                            },
+                        });
+                    });
+                }
             }
         },
     },

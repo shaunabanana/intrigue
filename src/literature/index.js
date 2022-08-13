@@ -68,13 +68,27 @@ export function extractIdentifier(content) {
         };
     }
 
+    // Check Zotero Paste
+    try {
+        const data = JSON.parse(content);
+        if (data.source === 'zotero') {
+            return {
+                type: 'zotero',
+                identifier: data.url,
+                ...data,
+            };
+        }
+    } catch (e) {
+        // Do nothing here.
+    }
+
     // Check Zotero URL
     const zotero = linkify.find(content, 'url').filter(
         (item) => item.value.startsWith('zotero://'),
     );
     if (zotero.length > 0) {
         return {
-            type: 'zotero',
+            type: 'zotero-link',
             identifier: zotero[0].href,
         };
     }
