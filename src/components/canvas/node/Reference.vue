@@ -1,5 +1,5 @@
 <template>
-    <div class="reference-content" ref="reference">
+    <div class="reference-content" ref="reference" @dblclick.stop.prevent="showFullText">
         <span class="title"> {{ title ? title : 'Fetching title...' }} </span> <br />
         <span class="authors">
             {{ author ? formatAuthors(author) : 'Fetching authors...' }}
@@ -35,6 +35,18 @@ export default defineComponent({
                 }
             });
             return authorsString;
+        },
+
+        showFullText() {
+            if (this.type === 'zotero' || this.type === 'zotero-link') {
+                window.open(this.identifier);
+            } else if (this.type === 'doi') {
+                window.open(`https://sci-hub.se/${this.data.identifier}`);
+            } else if (this.type === 'isbn') {
+                window.open(`http://libgen.rs/search.php?req=${this.data.identifier}`);
+            } else if (this.type === 'url') {
+                window.open(this.identifier);
+            }
         },
     },
 });
