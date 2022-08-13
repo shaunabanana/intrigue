@@ -241,14 +241,15 @@ export default defineComponent({
         },
 
         selectedByRemoteUsers() {
+            console.log(this.document.users);
             let selected = false;
             Object.entries(this.document.users).some(([userId, userData]) => {
-                if (userId === this.document.userId) return true;
+                if (userId === this.document.userId) return false;
                 if (userData.selection.includes(this.node.id)) {
                     selected = true;
-                    return false;
+                    return true;
                 }
-                return true;
+                return false;
             });
             return selected;
         },
