@@ -42,6 +42,7 @@
     "linkifyjs": "^3.0.5",
     "nanoid": "^4.0.0",
     "node-fetch": "^3.2.6",
+    "node-polyfill-webpack-plugin": "^2.0.1",
     "path-browserify": "^1.0.1",
     "random-fruits-name": "^1.9.5",
     "tinykeys": "^1.4.0",
