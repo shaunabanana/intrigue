@@ -93,4 +93,12 @@ export default class ReversibleDocument extends SyncedDocument {
     redo() {
         this.popStackItem(this.redoStack, this.undoStack);
     }
+
+    canUndo() {
+        return this.undoStack.length > 0;
+    }
+
+    canRedo() {
+        return this.redoStack.length > 0;
+    }
 }
