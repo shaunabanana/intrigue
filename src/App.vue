@@ -1,6 +1,7 @@
 <template>
     <TitleBar />
     <DocumentCanvas />
+    <Debug />
 </template>
 
 <script>
@@ -17,12 +18,14 @@ import { useMachine } from '@xstate/vue';
 import TitleBar from '@/components/window/TitleBar.vue';
 
 import DocumentCanvas from '@/components/canvas/Canvas.vue';
+import Debug from '@/components/utils/Debug.vue';
 
 export default {
     name: 'App',
     components: {
         TitleBar,
         DocumentCanvas,
+        Debug,
     },
 
     data() {
