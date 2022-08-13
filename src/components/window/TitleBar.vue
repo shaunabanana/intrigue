@@ -26,14 +26,34 @@
             </a-col>
         </a-row>
 
-        <a-row v-else class="browser" justify="center" align="center">
-            Not running in Electron.
+        <a-row v-else class="browser noselect" justify="center" align="center">
+            <a-col :span="8">
+                <a-button-group style="margin-left: 1rem;">
+                    <a-button type="text" size="small"
+                        :disabled="!document.canUndo()"
+                        @click="document.undo()"
+                    >
+                        <template #icon><icon-undo /></template>
+                    </a-button>
+
+                    <a-button type="text" size="small"
+                        :disabled="!document.canRedo()"
+                        @click="document.redo()"
+                    >
+                        <template #icon><icon-redo /></template>
+                    </a-button>
+                </a-button-group>
+            </a-col>
+            <a-col :span="8" align="center">
+            </a-col>
+            <a-col :span="8" align="right" style="padding-right: 0.5rem">
+                <CopyButton size="small" :text="shareLink">Share</CopyButton>
+            </a-col>
         </a-row>
     </div>
 </template>
 
 <script>
-import { basename } from 'path';
 import isElectron from 'is-electron';
 import CopyButton from './CopyButton.vue';
 
@@ -53,6 +73,8 @@ export default {
 
     computed: {
         fileName() {
+            // eslint-disable-next-line global-require
+            const { basename } = require('path');
             return this.filePath.value ? basename(this.filePath.value) : 'Untitled';
         },
 
@@ -71,5 +93,12 @@ export default {
     -webkit-app-region: drag;
     z-index: 10000;
     background: linear-gradient(var(--background) 10%, transparent 100%)
+}
+
+.browser {
+    position: fixed;
+    width: 100%;
+    height: 2rem;
+    z-index: 10000;
 }
 </style>
