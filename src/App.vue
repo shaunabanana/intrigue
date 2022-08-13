@@ -64,10 +64,10 @@ export default {
 
     setup() {
         if (isElectron()) {
-            // eslint-disable-next-line global-require
-            const log = require('electron-log');
-            Object.assign(console, log.functions);
-            log.catchErrors();
+            import('electron-log').then((log) => {
+                Object.assign(console, log.functions);
+                log.catchErrors();
+            });
         }
 
         const { state, send } = useMachine(intrigueMachine);
@@ -90,16 +90,18 @@ export default {
         this.document.on('commit', () => {
             if (isElectron()) {
                 // eslint-disable-next-line import/no-extraneous-dependencies, global-require
-                const { ipcRenderer } = require('electron');
-                ipcRenderer.send('set-edited', true);
+                import('electron').then(({ ipcRenderer }) => {
+                    ipcRenderer.send('set-edited', true);
+                });
             }
         });
 
         this.document.on('saved', () => {
             if (isElectron()) {
                 // eslint-disable-next-line import/no-extraneous-dependencies, global-require
-                const { ipcRenderer } = require('electron');
-                ipcRenderer.send('set-edited', false);
+                import('electron').then(({ ipcRenderer }) => {
+                    ipcRenderer.send('set-edited', false);
+                });
             }
         });
 
@@ -112,23 +114,24 @@ export default {
 
         if (isElectron()) {
             // eslint-disable-next-line import/no-extraneous-dependencies, global-require
-            const { ipcRenderer } = require('electron');
-            ipcRenderer.on('new-file', () => {
-                console.log('[App][ipcRenderer@set-filepath] This is a new empty file.');
-                this.document.initSync();
-            });
+            import('electron').then(({ ipcRenderer }) => {
+                ipcRenderer.on('new-file', () => {
+                    console.log('[App][ipcRenderer@set-filepath] This is a new empty file.');
+                    this.document.initSync();
+                });
 
-            ipcRenderer.on('set-filepath', (_, filePath) => {
-                console.log(`[App][ipcRenderer@set-filepath] filePath is ${filePath}.`);
-                this.filePath = filePath;
-                this.document.initPersistence(filePath);
+                ipcRenderer.on('set-filepath', (_, filePath) => {
+                    console.log(`[App][ipcRenderer@set-filepath] filePath is ${filePath}.`);
+                    this.filePath = filePath;
+                    this.document.initPersistence(filePath);
+                });
             });
         } else {
             const queryString = window.location.search;
             const urlParams = new URLSearchParams(queryString);
             console.log(`[App][mounted] urlParams.document is ${urlParams.get('document')}`);
             this.document.initSync(urlParams.get('document'));
-            this.document.initPersistence(this.document.store.id);
+            this.document.initPersistence(urlParams.get('document'));
         }
     },
 
