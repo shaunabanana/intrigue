@@ -13,6 +13,8 @@
 </p>
 
 > Binaries now available for Windows, macOS, and Linux. Development is underway for a web-based version, with P2P collaborative editing!
+> 
+> Before using Intrigue, you might consider using [Snowball](https://github.com/shaunabanana/snowball) to find and screen relavant literature🔎
 
 ## What is this?
 Intrigue lets you quickly organize the papers you read alongside your thoughts in a visual & clean manner.
