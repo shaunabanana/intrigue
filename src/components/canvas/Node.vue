@@ -241,7 +241,7 @@ export default defineComponent({
         },
 
         selectedByRemoteUsers() {
-            console.log(this.document.users);
+            // console.log(this.document.users);
             let selected = false;
             Object.entries(this.document.users).some(([userId, userData]) => {
                 if (userId === this.document.userId) return false;
