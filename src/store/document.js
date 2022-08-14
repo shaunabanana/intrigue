@@ -258,4 +258,13 @@ export default class IntrigueDocument extends ReversibleDocument {
         delete this.store.links[linkId];
         return link;
     }
+
+    findLinkByNodeIds(sourceId, targetId) {
+        console.log(sourceId, targetId);
+        const finds = Object.keys(this.store.links).filter((linkId) => {
+            const link = this.store.links[linkId];
+            return link.source === sourceId && link.target === targetId;
+        });
+        return finds.length > 0 ? finds[0] : false;
+    }
 }
