@@ -4,8 +4,10 @@
 <h3 align="center">Intrigue</h3>
 <p align="center">Organize literature into ideas, fast.</p>
 <p align="center">
+  <a href="https://intrigue-app.github.io/?document=PC7uDb6ubL7f6CRwvJfsx">Web demo (v1.0 Alpha)</a> | 
   <a href="https://github.com/shaunabanana/intrigue/releases/tag/v1.0.0-alpha">Download v1.0 Alpha (Unstable)</a> | 
-  <a href="https://github.com/shaunabanana/intrigue/releases/tag/v0.1.6">Download Demo (v0.1.6)</a> | 
+  <a href="https://github.com/shaunabanana/intrigue/releases/tag/v0.1.6">Download older version (v0.1.6)</a>
+  <br />
   <a href="https://github.com/shaunabanana/intrigue/issues">Report Bugs</a> | 
   <a href="https://discord.gg/PEVwFEmf7P">Join Discord</a>
 </p>
@@ -14,6 +16,8 @@
 
 ## What is this?
 Intrigue lets you quickly organize the papers you read alongside your thoughts in a visual & clean manner.
+Check out the [web demo](https://intrigue-app.github.io/?document=PC7uDb6ubL7f6CRwvJfsx), which also serves as a tutorial.
+
 Features include:
 * (v1.0+) **Offline-first distributed collaborative editing**. Create on Desktop, share to web. No central server, you keep and distribute your own data.
 * (v1.0+) **Zotero Quick Copy translator** allows you to copy an item in Zotero, and paste it in a new Intrigue note to create a Reference. Upon double-clicking, it will lead you back to the item in Zotero. You can [**download the translator here**](https://github.com/shaunabanana/intrigue/releases/download/v1.0.0-alpha/Intrigue.js).
