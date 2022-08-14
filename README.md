@@ -15,7 +15,7 @@
 ## What is this?
 Intrigue lets you quickly organize the papers you read alongside your thoughts in a visual & clean manner.
 Features include:
-* (v1.0+) **Offline-first distributed collaborative editing**. Create on Desktop, share to web. You keep and distribute your own data.
+* (v1.0+) **Offline-first distributed collaborative editing**. Create on Desktop, share to web. No central server, you keep and distribute your own data.
 * (v1.0+) **Zotero Quick Copy translator** allows you to copy an item in Zotero, and paste it in a new Intrigue note to create a Reference. Upon double-clicking, it will lead you back to the item in Zotero. You can [**download the translator here**](https://github.com/shaunabanana/intrigue/releases/download/v1.0.0-alpha/Intrigue.js).
 * Automatically pull metadata of **papers (using DOI), books (using ISBN), BibTeX, and web links** using [Citation.js](https://citation.js.org).
 * Double clicking reference nodes takes you to a PDF at you-know-where.
