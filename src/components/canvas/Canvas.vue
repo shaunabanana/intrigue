@@ -34,6 +34,7 @@
                     :ref="node.id"
                     :node="node"
                     :selected="selection.some((t) => t.id === node.id)"
+                    @click="tryLinking(node.id)"
                     @dblclick.stop="doubleClickNode(node)"
                     @update-dimensions="$refs.moveable.updateRect"
                 />
@@ -162,7 +163,7 @@ export default defineComponent({
                 type: 'dblclick node',
                 node: node.id,
             });
-            console.log(this.state.value, this.editing.value);
+            // console.log(this.state.value, this.editing.value);
         },
 
         deleteNodes(event) {
@@ -347,17 +348,29 @@ export default defineComponent({
             }
         },
 
-        selectNode(e) {
+        tryLinking(nodeId) {
             if (this.linking.value) {
-                if (e.selected.length === 1 && e.selected[0].id !== this.linking.value) {
-                    console.log(`[Canvas][selectNode] Linking ${this.linking.value} to ${e.selected[0].id}`);
-                    this.document.commit('createLink', {
-                        source: this.linking.value,
-                        target: e.selected[0].id,
-                    });
-                    return;
+                if (nodeId !== this.linking.value) {
+                    console.log(`[Canvas][selectNode] Linking ${this.linking.value} to ${nodeId}`);
+
+                    const linkId = this.document.findLinkByNodeIds(
+                        this.linking.value,
+                        nodeId,
+                    );
+                    if (linkId) {
+                        this.document.commit('removeLink', linkId);
+                    } else {
+                        this.document.commit('createLink', {
+                            source: this.linking.value,
+                            target: nodeId,
+                        });
+                    }
                 }
             }
+        },
+
+        selectNode(e) {
+            if (this.linking.value && e.selected.length > 0) return;
             this.send({
                 type: 'update selection',
                 selection: e.selected.map((el) => el.id),
