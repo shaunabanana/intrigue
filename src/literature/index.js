@@ -53,7 +53,7 @@ export function extractIsbn(subject) {
 export function extractIdentifier(content) {
     // Check ISBN
     const isbnString = extractIsbn(content);
-    if (isbnString) {
+    if (isbnString && isbnString === content.trim()) {
         return {
             type: 'isbn',
             identifier: isbnString,
@@ -61,7 +61,7 @@ export function extractIdentifier(content) {
     }
     // Check DOI
     const doiStrings = doi.extract(content);
-    if (doiStrings.length > 0) {
+    if (doiStrings.length > 0 && doiStrings[0] === content.trim()) {
         return {
             type: 'doi',
             identifier: doiStrings[0],
@@ -86,7 +86,7 @@ export function extractIdentifier(content) {
     const zotero = linkify.find(content, 'url').filter(
         (item) => item.value.startsWith('zotero://'),
     );
-    if (zotero.length > 0) {
+    if (zotero.length === 1 && zotero[0].value === content.trim()) {
         return {
             type: 'zotero-link',
             identifier: zotero[0].href,
@@ -95,7 +95,7 @@ export function extractIdentifier(content) {
 
     // Check URL
     const urls = linkify.find(content, 'url');
-    if (urls.length > 0) {
+    if (urls.length === 1 && urls[0].value === content.trim()) {
         return {
             type: 'url',
             identifier: urls[0].href,
@@ -105,11 +105,11 @@ export function extractIdentifier(content) {
 }
 
 export function fetchLiteratureInfo(type, identifier) {
-    console.log(type, identifier);
+    console.log(`[Literature][fetchLiteratureInfo] type: ${type}, identifier: ${identifier}`);
     return new Promise((resolve, reject) => {
         if (type === 'url') {
             axios.get(identifier).then((data) => {
-                console.log(data.request);
+                // console.log(data.request);
                 const matches = data.data.match(/<title>(.*?)<\/title>/);
                 resolve({
                     title: matches[1],
