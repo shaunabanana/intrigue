@@ -63,27 +63,25 @@
                     @resize="resizeNode"
                     @resizeEnd="commitNodeSize"
                 />
-
-                <VueSelecto
-                    ref="selecto"
-                    dragContainer=".canvas"
-                    :selectableTargets="['.node.selectable']"
-                    :selectByClick="true"
-                    :selectFromInside="false"
-                    :toggleContinueSelect="['shift']"
-                    :keyContainer="window"
-                    :hitRate="0"
-                    :ratio="0"
-                    @dragStart="preventSelectionWhenDragging"
-                    @select="selectNode"
-                    @selectEnd="commitSelections"
-                />
             </div>
         </vue-infinite-viewer>
+        <VueSelecto
+            ref="selecto"
+            dragContainer=".canvas"
+            :selectableTargets="['.node.selectable']"
+            :selectByClick="true"
+            :selectFromInside="false"
+            :toggleContinueSelect="['shift']"
+            :keyContainer="window"
+            :hitRate="0"
+            :ratio="0"
+            @dragStart="preventSelectionWhenDragging"
+            @select="selectNode"
+            @selectEnd="commitSelections"
+        />
         <svg class="links" id="links"
             xmlns="http://www.w3.org/2000/svg"
         />
-    >
     </div>
 </template>
 
@@ -499,8 +497,8 @@ export default defineComponent({
 <style>
 .canvas {
     position: fixed;
-    width: 100%;
-    height: 100%;
+    width: 100vw;
+    height: 100vh;
     background: transparent;
     background-image: radial-gradient(var(--color-neutral-3) 10%, transparent 10%);
     /* background-size: 15px 15px; */
