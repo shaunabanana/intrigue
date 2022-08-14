@@ -4,6 +4,7 @@
 <h3 align="center">Intrigue</h3>
 <p align="center">Organize literature into ideas, fast.</p>
 <p align="center">
+  <a href="https://github.com/shaunabanana/intrigue/releases/tag/v1.0.0-alpha">Download v1.0 Alpha (Unstable)</a> | 
   <a href="https://github.com/shaunabanana/intrigue/releases/tag/v0.1.6">Download Demo (v0.1.6)</a> | 
   <a href="https://github.com/shaunabanana/intrigue/issues">Report Bugs</a> | 
   <a href="https://discord.gg/PEVwFEmf7P">Join Discord</a>
@@ -14,6 +15,8 @@
 ## What is this?
 Intrigue lets you quickly organize the papers you read alongside your thoughts in a visual & clean manner.
 Features include:
+* (v1.0+) **Offline-first distributed collaborative editing**. Create on Desktop, share to web. You keep and distribute your own data.
+* (v1.0+) **Zotero Quick Copy translator** allows you to copy an item in Zotero, and paste it in a new Intrigue note to create a Reference. Upon double-clicking, it will lead you back to the item in Zotero. You can [**download the translator here**](https://github.com/shaunabanana/intrigue/releases/download/v1.0.0-alpha/Intrigue.js).
 * Automatically pull metadata of **papers (using DOI), books (using ISBN), BibTeX, and web links** using [Citation.js](https://citation.js.org).
 * Double clicking reference nodes takes you to a PDF at you-know-where.
 * Full **WYSIWYG** markdown support in the notes, powered by [TipTap](https://www.tiptap.dev).
@@ -39,3 +42,7 @@ Please file an issue [here](https://github.com/shaunabanana/intrigue/issues), or
 
 ## Support me
 <a href="https://www.buymeacoffee.com/shengchen" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/default-orange.png" alt="Buy Me A Coffee" height="41" width="174"></a>
+
+[爱发电](https://afdian.net/@shaunabanana)
+
+<img width="250" src="./assets/afdian.jpg" alt="Logo">
