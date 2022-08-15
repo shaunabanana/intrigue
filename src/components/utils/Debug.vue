@@ -3,6 +3,10 @@
         <div>{{currentState}}</div>
 
         <pre>{{currentContext}}</pre>
+
+        <a-space>
+            <a-button @click="exportJSON">Export Data</a-button>
+        </a-space>
     </a-card>
 </template>
 
@@ -11,7 +15,13 @@ import { stringify } from 'yaml';
 
 export default {
     name: 'IntrigueDebug',
-    inject: ['state'],
+    inject: ['state', 'store'],
+
+    methods: {
+        exportJSON() {
+            console.log(JSON.stringify(this.store.value));
+        },
+    },
 
     computed: {
         currentState() {
