@@ -17,6 +17,8 @@ import { IntrigueDocument } from '@/store';
 import intrigueMachine from '@/state';
 import { useMachine } from '@xstate/vue';
 
+import tutorialData from '@/utils/tutorial';
+
 import TitleBar from '@/components/window/TitleBar.vue';
 import DocumentCanvas from '@/components/canvas/Canvas.vue';
 import PointerTracker from '@/components/canvas/PointerTracker.vue';
@@ -131,7 +133,19 @@ export default {
             const urlParams = new URLSearchParams(queryString);
             console.log(`[App][mounted] urlParams.document is ${urlParams.get('document')}`);
             this.document.initSync(urlParams.get('document'));
-            this.document.initPersistence(urlParams.get('document'));
+
+            if (urlParams.get('document') === 'tutorial') {
+                console.log('[App][mounted@web] Loading tutorial data...');
+                Object.keys(tutorialData.nodes).forEach((nodeId) => {
+                    this.store.nodes[nodeId] = tutorialData.nodes[nodeId];
+                });
+
+                Object.keys(tutorialData.links).forEach((linkId) => {
+                    this.store.links[linkId] = tutorialData.links[linkId];
+                });
+            } else {
+                this.document.initPersistence(urlParams.get('document'));
+            }
         }
     },
 
