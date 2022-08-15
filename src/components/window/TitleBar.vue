@@ -45,6 +45,7 @@
                 </a-button-group>
             </a-col>
             <a-col :span="8" align="center">
+                To save this document, bookmark this page or copy the share link →
             </a-col>
             <a-col :span="8" align="right" style="padding-right: 0.5rem">
                 <CopyButton size="small" :text="shareLink">Share</CopyButton>
@@ -68,7 +69,22 @@ export default {
     data() {
         return {
             electron: isElectron(),
+            newFile: false,
         };
+    },
+
+    mounted() {
+        const queryString = window.location.search;
+        const urlParams = new URLSearchParams(queryString);
+        this.newFile = !urlParams.get('document');
+
+        this.document.on('synced', () => {
+            if (this.newFile) {
+                const url = new URL(window.location.href);
+                url.searchParams.set('document', this.store.value.metadata.id);
+                window.history.replaceState(null, null, url);
+            }
+        });
     },
 
     computed: {
