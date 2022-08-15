@@ -4,7 +4,7 @@
 <h3 align="center">Intrigue</h3>
 <p align="center">Organize literature into ideas, fast.</p>
 <p align="center">
-  <a href="https://intrigue-app.github.io/?document=PC7uDb6ubL7f6CRwvJfsx">Web demo (v1.0 Alpha)</a> | 
+  <a href="https://intrigue-app.github.io/?document=tutorial">Web demo (v1.0 Alpha)</a> | 
   <a href="https://github.com/shaunabanana/intrigue/releases/tag/v1.0.0-alpha">Download v1.0 Alpha (Unstable)</a> | 
   <a href="https://github.com/shaunabanana/intrigue/releases/tag/v0.1.6">Download older version (v0.1.6)</a>
   <br />
