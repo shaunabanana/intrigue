@@ -1,7 +1,7 @@
 /* eslint-disable import/no-extraneous-dependencies */
 import { createProtocol } from 'vue-cli-plugin-electron-builder/lib';
 import {
-    app, BrowserWindow, shell,
+    app, BrowserWindow, shell, dialog,
 } from 'electron';
 import { basename } from 'path';
 
@@ -29,14 +29,31 @@ export class EditorWindowManager {
             shell.openExternal(event.url);
         });
 
-        window.once('close', (e) => {
+        window.on('close', (e) => {
             if (window.documentEdited) {
                 e.preventDefault();
-                // saveFile(null, window, null, () => {
-                //     console.log('Saved!');
-                //     window.setDocumentEdited(false);
-                //     window.close();
-                // });
+                const savePath = this.getFilePath(window);
+                if (savePath) {
+                    // Manually save file here.
+                    window.webContents.send('save-file');
+                } else {
+                    const newSavePath = dialog.showSaveDialogSync(window, {
+                        filters: [
+                            { name: 'Intrigue Files', extensions: ['intrigue'] },
+                        ],
+                        properties: [
+                            'showOverwriteConfirmation', 'createDirectory',
+                        ],
+                    });
+                    if (newSavePath) this.setFilePath(window, newSavePath, true);
+                }
+
+                const checkSaved = () => {
+                    if (window.documentEdited) setTimeout(checkSaved, 100);
+                    else window.close();
+                };
+
+                checkSaved();
             }
         });
 
@@ -48,7 +65,7 @@ export class EditorWindowManager {
                 window.setTitle(`${basename(filePath)} - Intrigue`);
                 window.webContents.send('set-filepath', filePath);
             } else {
-                window.setDocumentEdited(true);
+                window.setDocumentEdited(false);
                 window.setTitle('Untitled - Intrigue');
                 window.webContents.send('new-file');
             }
