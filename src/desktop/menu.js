@@ -47,15 +47,8 @@ function openInNewWindow() {
     windowManager.createWindow(openPath);
 }
 
-export function openFile(item, window) {
-    if (window && !window.documentEdited) {
-        saveFile(null, window, null, () => {
-            window.close();
-            openInNewWindow();
-        });
-    } else {
-        openInNewWindow();
-    }
+export function openFile() {
+    openInNewWindow();
 }
 
 function newFile() {
@@ -135,11 +128,11 @@ export const menuTemplate = [
                 click: saveFile,
                 accelerator: 'CommandOrControl+S',
             },
-            {
-                label: 'Save As...',
-                click: () => { console.log('save as'); },
-                accelerator: 'CommandOrControl+Shift+S',
-            },
+            // {
+            //     label: 'Save As...',
+            //     click: () => { console.log('save as'); },
+            //     accelerator: 'CommandOrControl+Shift+S',
+            // },
             // { type: 'separator' },
             // { label: 'Print...' },
             // isMac ? { role: 'close' } : { role: 'quit' }
