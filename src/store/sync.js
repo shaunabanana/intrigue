@@ -34,6 +34,7 @@ export default class SyncedDocument extends EventEmitter {
         const doc = getYjsValue(this.syncedData);
         this.syncProvider = new WebrtcProvider(this.store.metadata.id, doc);
         this.syncProvider.awareness.on('change', this.handleChanges.bind(this));
+        doc.on('update', () => this.emit('sync'));
 
         // Generate a random user id, then update the awareness.
         this.userId = nanoid();
@@ -71,6 +72,14 @@ export default class SyncedDocument extends EventEmitter {
             (change) => change.path !== '/fragment',
         );
         jiff.patchInPlace(changes, this.syncedData);
+    }
+
+    updateStoreData() {
+        console.log('[Sync][updateStoreData] Updating store data from upon sync update.');
+        const changes = jiff.diff(this.store, this.syncedData).filter(
+            (change) => change.path !== '/fragment',
+        );
+        jiff.patchInPlace(changes, this.store);
     }
 
     close() {
