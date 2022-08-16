@@ -23,6 +23,7 @@
 </template>
 
 <script>
+import { reactive } from 'vue';
 import { stringify } from 'yaml';
 
 export default {
@@ -42,9 +43,7 @@ export default {
         },
 
         importJSON() {
-            console.log(this.jsonData);
-            console.log(JSON.parse(this.jsonData));
-            this.document.store = JSON.parse(this.jsonData);
+            this.document.store = reactive(JSON.parse(this.jsonData));
             this.document.unbindSyncHandler();
             this.document.updateSyncedData();
             this.document.unbindCommitHandler = this.document.on('commit', this.document.updateSyncedData.bind(this.document));
