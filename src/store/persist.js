@@ -30,14 +30,12 @@ export default class LocalFilePersistence extends EventEmitter {
             this.emit('synced');
         } else {
             this.access(this.filePath).then(() => {
-                this.readFile(filePath).then((data) => {
+                this.readFile(this.filePath).then((data) => {
                     applyUpdate(this.doc, Uint8Array.from(data));
                     this.emit('synced');
                 });
             }).catch(() => {
-                this.storeUpdate(null, () => {
-                    this.emit('synced');
-                });
+                console.error(`Cannot access file at ${this.filePath}`);
             });
         }
         this.doc.on('update', this.storeUpdate.bind(this));
