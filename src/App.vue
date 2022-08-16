@@ -2,7 +2,7 @@
     <TitleBar />
     <DocumentCanvas />
     <PointerTracker />
-    <!-- <Debug /> -->
+    <Debug v-if="debug"/>
 </template>
 
 <script>
@@ -22,7 +22,7 @@ import tutorialData from '@/utils/tutorial';
 import TitleBar from '@/components/window/TitleBar.vue';
 import DocumentCanvas from '@/components/canvas/Canvas.vue';
 import PointerTracker from '@/components/canvas/PointerTracker.vue';
-// import Debug from '@/components/utils/Debug.vue';
+import Debug from '@/components/utils/Debug.vue';
 
 export default {
     name: 'App',
@@ -30,7 +30,7 @@ export default {
         TitleBar,
         DocumentCanvas,
         PointerTracker,
-        // Debug,
+        Debug,
     },
 
     data() {
@@ -41,6 +41,7 @@ export default {
             store: document.store,
             users: [],
             loading: true,
+            debug: false,
             title: '',
             docId: undefined,
             filePath: undefined,
