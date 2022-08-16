@@ -26,8 +26,8 @@ export default class IntrigueDocument extends ReversibleDocument {
         this.registerInverses('snapNode', 'unsnapNode');
         this.registerInverses('createLink', 'removeLink');
 
-        this.on('sync', this.updateStoreData.bind(this));
-        this.on('commit', this.updateSyncedData.bind(this));
+        this.unbindSyncHandler = this.on('sync', this.updateStoreData.bind(this));
+        this.unbindCommitHandler = this.on('commit', this.updateSyncedData.bind(this));
     }
 
     // Note: each function below should return its inverse parameters
