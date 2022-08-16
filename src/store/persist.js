@@ -35,7 +35,8 @@ export default class LocalFilePersistence extends EventEmitter {
                     this.emit('synced');
                 });
             }).catch(() => {
-                console.error(`Cannot access file at ${this.filePath}`);
+                // console.error(`Cannot access file at ${this.filePath}`);
+                this.storeUpdate();
             });
         }
         this.doc.on('update', this.storeUpdate.bind(this));
