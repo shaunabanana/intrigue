@@ -56,4 +56,18 @@ export default class LocalFilePersistence extends EventEmitter {
             this.saveToDisk();
         }, this.debounce);
     }
+
+    saveToDisk() {
+        if (!this.filePath) return;
+        if (this.timeout) {
+            clearTimeout(this.timeout);
+            this.timeout = null;
+        }
+
+        this.emit('save');
+        this.writeFile(this.filePath, encodeStateAsUpdate(this.doc)).then(() => {
+            // if (callback) callback();
+            this.emit('saved');
+        });
+    }
 }
