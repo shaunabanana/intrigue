@@ -69,6 +69,11 @@ export default class SyncedDocument extends EventEmitter {
             this.emit('synced');
         });
 
+        this.saveProvider.on('save', () => {
+            console.log('[Sync][saveProvider@synced] Saving to disk...');
+            this.emit('save');
+        });
+
         this.saveProvider.on('saved', () => {
             console.log('[Sync][saveProvider@synced] Save provider saved.');
             this.emit('saved');
