@@ -39,7 +39,7 @@
                     @update-dimensions="$refs.moveable.updateRect"
                 />
 
-                <!-- <div v-for="user in document.users" :key="user.id">
+                <div v-for="user in document.users" :key="user.id">
                     <Cursor
                         v-if="document.localUser.id !== user.id"
                         :id="user.id"
@@ -47,7 +47,7 @@
                         :x="user.cursorX"
                         :y="user.cursorY"
                     />
-                </div> -->
+                </div>
 
                 <Moveable
                     ref="moveable"
@@ -100,7 +100,7 @@ import Keyboard from '@/keyboard';
 
 import IntrigueNode from '@/components/canvas/Node.vue';
 import IntrigueLink from '@/components/canvas/Link.vue';
-// import Cursor from '@/components/canvas/Cursor.vue';
+import Cursor from '@/components/canvas/Cursor.vue';
 
 export default defineComponent({
     name: 'IntrigueCanvas',
@@ -111,7 +111,7 @@ export default defineComponent({
         VueSelecto,
         IntrigueNode,
         IntrigueLink,
-        // Cursor,
+        Cursor,
     },
 
     provide() {
