@@ -55,11 +55,11 @@ export default class SyncedDocument extends EventEmitter {
         this.syncInitialized = true;
     }
 
-    initPersistence(filePath) {
+    initPersistence(filePath, overwrite) {
         console.log(filePath);
         const doc = getYjsValue(this.syncedData);
         this.saveProvider = isElectron()
-            ? new LocalFilePersistence(filePath, doc)
+            ? new LocalFilePersistence(filePath, doc, overwrite)
             : new IndexeddbPersistence(filePath || this.store.metadata.id, doc);
 
         this.saveProvider.on('synced', () => {

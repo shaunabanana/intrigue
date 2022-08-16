@@ -4,7 +4,7 @@ import { encodeStateAsUpdate, applyUpdate } from 'yjs';
 import EventEmitter from '@/utils/event';
 
 export default class LocalFilePersistence extends EventEmitter {
-    constructor(filePath, doc, fs, debounce) {
+    constructor(filePath, doc, overwrite, fs, debounce) {
         super();
         this.doc = doc;
         this.filePath = filePath;
@@ -30,10 +30,14 @@ export default class LocalFilePersistence extends EventEmitter {
             this.emit('synced');
         } else {
             this.access(this.filePath).then(() => {
-                this.readFile(this.filePath).then((data) => {
-                    applyUpdate(this.doc, Uint8Array.from(data));
-                    this.emit('synced');
-                });
+                if (overwrite) {
+                    this.saveToDisk();
+                } else {
+                    this.readFile(this.filePath).then((data) => {
+                        applyUpdate(this.doc, Uint8Array.from(data));
+                        this.emit('synced');
+                    });
+                }
             }).catch(() => {
                 // console.error(`Cannot access file at ${this.filePath}`);
                 this.saveToDisk();

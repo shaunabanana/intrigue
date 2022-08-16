@@ -81,7 +81,7 @@ export class EditorWindowManager {
         return result;
     }
 
-    setFilePath(window, filePath) {
+    setFilePath(window, filePath, overwrite) {
         this.windows.forEach((record) => {
             if (record.window === window) {
                 // eslint-disable-next-line no-param-reassign
@@ -89,7 +89,7 @@ export class EditorWindowManager {
                 app.addRecentDocument(filePath);
                 window.setRepresentedFilename(filePath);
                 window.setTitle(`${basename(filePath)} - Intrigue`);
-                window.webContents.send('set-filepath', filePath);
+                window.webContents.send('set-filepath', filePath, overwrite);
             }
         });
     }

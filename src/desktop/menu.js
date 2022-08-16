@@ -16,6 +16,7 @@ export function saveFile(item, window) {
     const filePath = windowManager.getFilePath(window);
     if (filePath) {
         // Manually save file here.
+        window.webContents.send('save-file');
     } else {
         const savePath = dialog.showSaveDialogSync(window, {
             filters: [
@@ -25,7 +26,7 @@ export function saveFile(item, window) {
                 'showOverwriteConfirmation', 'createDirectory',
             ],
         });
-        windowManager.setFilePath(window, savePath);
+        windowManager.setFilePath(window, savePath, true);
     }
 }
 

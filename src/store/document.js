@@ -270,4 +270,8 @@ export default class IntrigueDocument extends ReversibleDocument {
         });
         return finds.length > 0 ? finds[0] : false;
     }
+
+    saveToDisk() {
+        if (this.saveProvider.saveToDisk) this.saveProvider.saveToDisk();
+    }
 }

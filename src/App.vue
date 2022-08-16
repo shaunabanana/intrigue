@@ -100,6 +100,7 @@ export default {
         });
 
         this.document.on('saved', () => {
+            this.$message.success('Saved!');
             if (isElectron()) {
                 // eslint-disable-next-line import/no-extraneous-dependencies, global-require
                 import('electron').then(({ ipcRenderer }) => {
@@ -123,10 +124,15 @@ export default {
                     this.document.initSync();
                 });
 
-                ipcRenderer.on('set-filepath', (_, filePath) => {
+                ipcRenderer.on('set-filepath', (_, filePath, overwrite) => {
                     console.log(`[App][ipcRenderer@set-filepath] filePath is ${filePath}.`);
                     this.filePath = filePath;
-                    this.document.initPersistence(filePath);
+                    this.document.initPersistence(filePath, overwrite);
+                });
+
+                ipcRenderer.on('save-file', () => {
+                    console.log('[App][ipcRenderer@save-file] Manual save to disk.');
+                    this.document.saveToDisk();
                 });
             });
         } else {
