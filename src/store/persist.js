@@ -9,7 +9,7 @@ export default class LocalFilePersistence extends EventEmitter {
         this.doc = doc;
         this.filePath = filePath;
         this.timeout = null;
-        this.debounce = debounce || 1000;
+        this.debounce = debounce;
 
         if (isElectron()) {
             // eslint-disable-next-line global-require
@@ -36,13 +36,14 @@ export default class LocalFilePersistence extends EventEmitter {
                 });
             }).catch(() => {
                 // console.error(`Cannot access file at ${this.filePath}`);
-                this.storeUpdate();
+                this.saveToDisk();
             });
         }
-        this.doc.on('update', this.storeUpdate.bind(this));
+        this.doc.on('update', this.triggerAutosave.bind(this));
     }
 
-    storeUpdate() {
+    triggerAutosave() {
+        if (!this.debounce) return;
         if (this.timeout) {
             clearTimeout(this.timeout);
             this.timeout = null;
@@ -50,12 +51,9 @@ export default class LocalFilePersistence extends EventEmitter {
         this.timeout = setTimeout(() => {
             if (!this.filePath) return;
 
-            console.log('[LocalFilePersistence][storeUpdate] Saving to disk.');
+            console.log('[LocalFilePersistence][triggerAutosave@timeout] Saving to disk.');
             console.log(encodeStateAsUpdate(this.doc));
-            this.writeFile(this.filePath, encodeStateAsUpdate(this.doc)).then(() => {
-                // if (callback) callback();
-                this.emit('saved');
-            });
+            this.saveToDisk();
         }, this.debounce);
     }
 }
