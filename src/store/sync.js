@@ -3,7 +3,6 @@ import * as Vue from 'vue';
 import { reactive } from 'vue';
 import isElectron from 'is-electron';
 import { enableVueBindings, syncedStore, getYjsValue } from '@syncedstore/core';
-import jiff from 'jiff';
 
 import { WebrtcProvider } from 'y-webrtc';
 import { IndexeddbPersistence } from 'y-indexeddb';
@@ -69,22 +68,6 @@ export default class SyncedDocument extends EventEmitter {
             console.log('[Sync][saveProvider@synced] Save provider saved.');
             this.emit('saved');
         });
-    }
-
-    updatestore() {
-        console.log('[Sync][updatestore] Updating synced data from store after commit.');
-        const changes = jiff.diff(this.store, this.store).filter(
-            (change) => change.path !== '/fragment',
-        );
-        jiff.patchInPlace(changes, this.store);
-    }
-
-    updateStoreData() {
-        console.log('[Sync][updateStoreData] Updating store data from upon sync update.');
-        const changes = jiff.diff(this.store, this.store).filter(
-            (change) => change.path !== '/fragment',
-        );
-        jiff.patchInPlace(changes, this.store);
     }
 
     close() {

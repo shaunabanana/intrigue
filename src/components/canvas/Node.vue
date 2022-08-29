@@ -57,6 +57,7 @@ import { NodeTypes } from '@/store';
 
 import Note from '@/components/canvas/node/Note.vue';
 import Reference from '@/components/canvas/node/Reference.vue';
+
 import { extractIdentifier, fetchLiteratureInfo } from '@/literature';
 
 export default defineComponent({
@@ -148,7 +149,7 @@ export default defineComponent({
         },
 
         commitUpdatedDimensions() {
-            this.document.commit('updateNode', {
+            this.document.updateNode({
                 id: this.node.id,
                 set: {
                     x: this.localData.currentX,

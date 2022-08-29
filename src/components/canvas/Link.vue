@@ -1,21 +1,29 @@
 <template>
-    <teleport to="#links">
+    <!-- <teleport to="#links"> -->
+    <svg class="link" xmlns="http://www.w3.org/2000/svg"
+        :width="width" :height="height"
+        :style="{left: `${left}px`, top: `${top}px`}"
+    >
         <g ref="arrow" style="pointer-events: auto">
             <path
                 style="cursor: pointer"
-                :d="`M ${sx} ${sy} C ${c1x} ${c1y}, ${c2x} ${c2y}, ${ex} ${ey}`"
+                :d="`M ${sx} ${sy}`
+                     + `C ${c1x} ${c1y},`
+                     + `${c2x} ${c2y},`
+                     + `${ex} ${ey}`"
                 :stroke="color"
-                :stroke-width="arrowHeadSize / 3 * zoom.value"
+                :stroke-width="arrowHeadSize / 3"
                 fill="none"
             />
             <polygon
-                :points="`0,${-arrowHeadSize * zoom.value} ${arrowHeadSize *
-                2 * zoom.value},0, 0,${arrowHeadSize * zoom.value}`"
+                :points="`0,${-arrowHeadSize} ${arrowHeadSize * 2},0,
+                          0,${arrowHeadSize}`"
                 :transform="`translate(${ex}, ${ey}) rotate(${ae})`"
                 :fill="color"
             />
         </g>
-    </teleport>
+    </svg>
+    <!-- </teleport> -->
 </template>
 
 <script>
@@ -69,6 +77,10 @@ export default {
             ey: 0,
             ae: 0,
             as: 0,
+            top: 0,
+            left: 0,
+            width: 100,
+            height: 100,
         };
     },
 
@@ -104,14 +116,23 @@ export default {
                 { padEnd: this.arrowHeadSize },
             );
 
-            this.sx = this.mapX(sx);
-            this.sy = this.mapY(sy);
-            this.c1x = this.mapX(c1x);
-            this.c1y = this.mapY(c1y);
-            this.c2x = this.mapX(c2x);
-            this.c2y = this.mapY(c2y);
-            this.ex = this.mapX(ex);
-            this.ey = this.mapY(ey);
+            const left = Math.min(sourceBox.x, targetBox.x);
+            const right = Math.max(sourceBox.x + sourceBox.w, targetBox.x + targetBox.w);
+            const top = Math.min(sourceBox.y, targetBox.y);
+            const bottom = Math.max(sourceBox.y + sourceBox.h, targetBox.y + targetBox.h);
+
+            this.left = left;
+            this.width = right - left;
+            this.top = top;
+            this.height = bottom - top;
+            this.sx = sx - left;
+            this.sy = sy - top;
+            this.c1x = c1x - left;
+            this.c1y = c1y - top;
+            this.c2x = c2x - left;
+            this.c2y = c2y - top;
+            this.ex = ex - left;
+            this.ey = ey - top;
             this.ae = ae;
         },
 
@@ -162,26 +183,32 @@ export default {
             },
         },
 
-        x: {
-            deep: true,
-            handler() {
-                this.updateLine();
-            },
-        },
+        // x: {
+        //     deep: true,
+        //     handler() {
+        //         this.updateLine();
+        //     },
+        // },
 
-        y: {
-            deep: true,
-            handler() {
-                this.updateLine();
-            },
-        },
+        // y: {
+        //     deep: true,
+        //     handler() {
+        //         this.updateLine();
+        //     },
+        // },
 
-        zoom: {
-            deep: true,
-            handler() {
-                this.updateLine(true);
-            },
-        },
+        // zoom: {
+        //     deep: true,
+        //     handler() {
+        //         this.updateLine(true);
+        //     },
+        // },
     },
 };
 </script>
+
+<style scoped>
+.link {
+    position: absolute;
+}
+</style>
