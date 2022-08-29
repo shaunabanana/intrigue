@@ -43,10 +43,27 @@ export default {
         },
 
         importJSON() {
-            this.document.store = reactive(JSON.parse(this.jsonData));
-            this.document.unbindSyncHandler();
-            this.document.updateSyncedData();
-            this.document.unbindCommitHandler = this.document.on('commit', this.document.updateSyncedData.bind(this.document));
+            const data = JSON.parse(this.jsonData);
+            this.document.store = reactive(data);
+
+            if (this.document.unbindSyncHandler) this.document.unbindSyncHandler();
+            if (this.document.unbindCommitHandler) {
+                this.document.unbindCommitHandler();
+                this.document.unbindCommitHandler = this.document.on('commit', this.document.commitToSyncedData.bind(this.document));
+            }
+
+            Object.keys(data.metadata).forEach((key) => {
+                this.document.syncedData.metadata[key] = data.metadata[key];
+            });
+
+            Object.keys(data.nodes).forEach((nodeId) => {
+                this.document.syncedData.nodes[nodeId] = data.nodes[nodeId];
+            });
+
+            Object.keys(data.links).forEach((linkId) => {
+                this.document.syncedData.links[linkId] = data.links[linkId];
+            });
+
             this.showImportModal = false;
         },
     },

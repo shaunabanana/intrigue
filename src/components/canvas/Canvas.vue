@@ -283,13 +283,13 @@ export default defineComponent({
             events.forEach((e) => {
                 const node = this.store.value.nodes[e.target.id];
                 if (node.parent) return;
-                this.document.updateNode({
-                    id: e.target.id,
-                    set: {
-                        currentX: e.translate[0],
-                        currentY: e.translate[1],
-                    },
-                });
+                if (!this.document.localData.nodes[e.target.id]) {
+                    this.document.localData.nodes[e.target.id] = {};
+                }
+                // eslint-disable-next-line prefer-destructuring
+                this.document.localData.nodes[e.target.id].currentX = e.translate[0];
+                // eslint-disable-next-line prefer-destructuring
+                this.document.localData.nodes[e.target.id].currentY = e.translate[1];
             });
         },
 
@@ -314,19 +314,19 @@ export default defineComponent({
             }
 
             // If event.lastEvent exists, then it means that the node moved a little.
-            // Basically, not a "in-place click".
+            // Basically, not an "in-place click".
             if (event.lastEvent) {
                 if (event.lastEvent.target) {
                     event.lastEvent.target.classList.remove('clickthrough');
                 }
                 // Only update the parents, and the descendants will follow.
-                const toUpdate = [];
+                const parents = [];
                 this.selection.forEach((e) => {
                     const node = this.store.value.nodes[e.id];
-                    if (!node.parent) toUpdate.push(e.id);
+                    if (!node.parent) parents.push(e.id);
                 });
                 this.document.commit('updateNodes', {
-                    id: toUpdate,
+                    id: parents,
                     by: {
                         x: event.lastEvent.dist[0],
                         y: event.lastEvent.dist[1],

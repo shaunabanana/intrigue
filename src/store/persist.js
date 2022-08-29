@@ -56,7 +56,6 @@ export default class LocalFilePersistence extends EventEmitter {
             if (!this.filePath) return;
 
             console.log('[LocalFilePersistence][triggerAutosave@timeout] Saving to disk.');
-            console.log(encodeStateAsUpdate(this.doc));
             this.saveToDisk();
         }, this.debounce);
     }

@@ -24,7 +24,7 @@ import { getBoxToBoxArrow } from 'curved-arrows';
 
 export default {
     name: 'IntrigueLink',
-    inject: ['store', 'x', 'y', 'zoom'],
+    inject: ['document', 'store', 'x', 'y', 'zoom'],
 
     props: {
         source: {
@@ -50,8 +50,8 @@ export default {
     },
 
     data() {
-        const sourceNode = this.store.value.nodes[this.source];
-        const targetNode = this.store.value.nodes[this.target];
+        const sourceNode = this.document.localData.nodes[this.source];
+        const targetNode = this.document.localData.nodes[this.target];
         if (!targetNode) {
             window.addEventListener('mousemove', this.updateLine);
         }

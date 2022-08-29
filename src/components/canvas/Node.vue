@@ -78,12 +78,23 @@ export default defineComponent({
     },
 
     data() {
+        if (!this.document.localData.nodes[this.node.id]) {
+            this.document.localData.nodes[this.node.id] = {
+                currentX: this.node.x,
+                currentY: this.node.y,
+                currentWidth: this.node.w,
+                currentHeight: this.node.h,
+            };
+        }
         return {
             x: this.node.x,
             y: this.node.y,
             w: this.node.w,
             h: this.node.h,
+            localData: this.document.localData.nodes[this.node.id],
             parent: null,
+            parentLocalData: null,
+            commitTimer: null,
             // content: this.node.content,
         };
     },
@@ -108,38 +119,40 @@ export default defineComponent({
         },
 
         observeParent() {
+            this.parentLocalData = this.document.localData.nodes[this.parent.id];
             this.parentWatchers = [
-                this.$watch('parent.currentX', this.updateDimensionsFromParent),
-                this.$watch('parent.currentY', this.updateDimensionsFromParent),
-                this.$watch('parent.currentWidth', this.updateDimensionsFromParent),
-                this.$watch('parent.currentHeight', this.updateDimensionsFromParent),
+                this.$watch('parentLocalData.currentX', this.updateDimensionsFromParent),
+                this.$watch('parentLocalData.currentY', this.updateDimensionsFromParent),
+                this.$watch('parentLocalData.currentWidth', this.updateDimensionsFromParent),
+                this.$watch('parentLocalData.currentHeight', this.updateDimensionsFromParent),
             ];
         },
 
         updateDimensions() {
             if (!this.$refs.node) return;
-            const height = this.$refs.node.clientHeight;
-            this.document.updateNode({
-                id: this.node.id,
-                set: {
-                    currentHeight: height,
-                },
-            });
+            this.localData.currentHeight = this.$refs.node.clientHeight;
             this.$emit('update-dimensions');
         },
 
         updateDimensionsFromParent() {
-            // console.log('Updating dimensions from parent', this.node.id);
-            this.document.updateNode({
+            this.localData.currentX = this.parentLocalData.currentX;
+            this.localData.currentY = this.parentLocalData.currentY
+                + this.parentLocalData.currentHeight + 5;
+            this.localData.currentWidth = this.parentLocalData.currentWidth;
+            this.localData.currentHeight = this.$refs.node.clientHeight;
+
+            if (this.commitTimer) {
+                clearTimeout(this.commitTimer);
+            }
+            this.commitTimer = setTimeout(this.commitUpdatedDimensions, 300);
+        },
+
+        commitUpdatedDimensions() {
+            this.document.commit('updateNode', {
                 id: this.node.id,
                 set: {
-                    x: this.parent.currentX,
-                    y: this.parent.currentY + this.parent.currentHeight + 5,
-                    w: this.parent.currentWidth,
-                    currentX: this.parent.currentX,
-                    currentY: this.parent.currentY + this.parent.currentHeight + 5,
-                    currentWidth: this.parent.currentWidth,
-                    currentHeight: this.$refs.node.clientHeight,
+                    x: this.localData.currentX,
+                    y: this.localData.currentY,
                 },
             });
         },
@@ -201,14 +214,9 @@ export default defineComponent({
         this.observer = new ResizeObserver(this.updateDimensions);
         this.observer.observe(this.$refs.node);
 
-        this.document.updateNode({
-            id: this.node.id,
-            set: {
-                currentX: this.node.x,
-                currentY: this.node.y,
-                currentHeight: this.node.h ? this.node.h : this.$refs.node.clientHeight,
-            },
-        });
+        this.localData.currentX = this.node.x;
+        this.localData.currentY = this.node.y;
+        this.localData.currentHeight = this.node.h ? this.node.h : this.$refs.node.clientHeight;
 
         if (this.node.parent) {
             this.parent = this.store.value.nodes[this.node.parent];
@@ -236,7 +244,6 @@ export default defineComponent({
                 transform: `translate(${this.x}px, ${this.y}px)`,
                 '--bg-color': 'rgb(250, 248, 229)',
                 '--border-color': 'rgb(233, 183, 109)',
-                'z-index': this.index,
             };
         },
 
@@ -262,19 +269,6 @@ export default defineComponent({
             return this.node.type === NodeTypes.Reference;
         },
 
-        index() {
-            let index = 0;
-            let current = this.node;
-            while (current.parent) {
-                index += 1;
-                current = this.store.value.nodes[current.parent];
-            }
-            if (this.selection.value.includes(this.node.id)) {
-                return index + 2;
-            }
-            return index;
-        },
-
         showLinkButton() {
             if (this.selection.value.length !== 1) return false;
             if (!this.selection.value.includes(this.node.id)) return false;
@@ -284,39 +278,28 @@ export default defineComponent({
 
     watch: {
         // eslint-disable-next-line func-names
-        'node.currentX': function () {
-            // console.log('node.currentX changed', this.node.id);
-            this.x = this.node.currentX;
+        'localData.currentX': function () {
+            this.x = this.localData.currentX;
         },
         // eslint-disable-next-line func-names
-        'node.currentY': function () {
-            this.y = this.node.currentY;
+        'localData.currentY': function () {
+            this.y = this.localData.currentY;
         },
         // eslint-disable-next-line func-names
-        'node.currentWidth': function () {
-            this.w = this.node.currentWidth;
+        'localData.currentWidth': function () {
+            this.w = this.localData.currentWidth;
         },
         // eslint-disable-next-line func-names
         'node.x': function () {
-            // console.log('node.x changed', this.node.id);
-            this.document.updateNode({
-                id: this.node.id,
-                set: { currentX: this.node.x },
-            });
+            this.localData.currentX = this.node.x;
         },
         // eslint-disable-next-line func-names
         'node.y': function () {
-            this.document.updateNode({
-                id: this.node.id,
-                set: { currentY: this.node.y },
-            });
+            this.localData.currentY = this.node.y;
         },
         // eslint-disable-next-line func-names
         'node.w': function () {
-            this.document.updateNode({
-                id: this.node.id,
-                set: { currentWidth: this.node.w },
-            });
+            this.localData.currentWidth = this.node.w;
         },
         // eslint-disable-next-line func-names
         'node.parent': function () {
@@ -328,6 +311,7 @@ export default defineComponent({
                 this.parent = null;
                 this.parentWatchers.forEach((removeParentWatcher) => removeParentWatcher());
                 this.parentWatchers = [];
+                this.parentLocalData = null;
             }
         },
     },

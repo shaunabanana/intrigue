@@ -49,7 +49,7 @@ export default class ReversibleDocument extends SyncedDocument {
         // console.log(`[Undo][Commit] ${JSON.stringify(this.undoStack, null, 2)}`);
 
         this.redoStack = [];
-        this.emit('commit');
+        this.emit('commit', action, params);
     }
 
     popStackItem(fromStack, toStack) {

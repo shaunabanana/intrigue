@@ -119,6 +119,11 @@ export default {
         if (isElectron()) {
             // eslint-disable-next-line import/no-extraneous-dependencies, global-require
             import('electron').then(({ ipcRenderer }) => {
+                ipcRenderer.invoke('get-packaged').then((isPackaged) => {
+                    console.log(`[App][ipcRenderer@get-packaged] ${isPackaged}`);
+                    this.debug = !isPackaged;
+                });
+
                 ipcRenderer.on('new-file', () => {
                     console.log('[App][ipcRenderer@set-filepath] This is a new empty file.');
                     this.document.initSync();

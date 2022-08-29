@@ -1,3 +1,4 @@
+/* eslint-disable class-methods-use-this */
 /* eslint-disable no-param-reassign */
 import { reactive } from 'vue';
 import { nanoid } from 'nanoid';
@@ -25,13 +26,11 @@ export default class IntrigueDocument extends ReversibleDocument {
         this.registerInverses('updateNodes', 'updateNodes');
         this.registerInverses('snapNode', 'unsnapNode');
         this.registerInverses('createLink', 'removeLink');
-
-        this.unbindSyncHandler = this.on('sync', this.updateStoreData.bind(this));
-        this.unbindCommitHandler = this.on('commit', this.updateSyncedData.bind(this));
     }
 
     // Note: each function below should return its inverse parameters
-    createNode(nodeItem) {
+    createNode(nodeItem, state) {
+        state = state || this.store;
         const nodeId = nodeItem.id ? nodeItem.id : nanoid();
         const node = {
             id: nodeId,
@@ -45,21 +44,19 @@ export default class IntrigueDocument extends ReversibleDocument {
             x: nodeItem.x ? nodeItem.x : 0,
             y: nodeItem.y ? nodeItem.y : 0,
             w: nodeItem.w ? nodeItem.w : 200,
-            currentX: nodeItem.x ? nodeItem.x : 0,
-            currentY: nodeItem.y ? nodeItem.y : 0,
-            currentWidth: nodeItem.w ? nodeItem.w : 200,
         };
         if (nodeItem.links) {
-            nodeItem.links.forEach((link) => this.createLink(link));
+            nodeItem.links.forEach((link) => this.createLink(link, state));
         }
         if (nodeItem.children) {
-            nodeItem.children.forEach((child) => this.snapNode(child));
+            nodeItem.children.forEach((child) => this.snapNode(child, state));
         }
-        this.store.nodes[nodeId] = node;
+        state.nodes[nodeId] = node;
         return nodeId;
     }
 
-    createNodes(nodeItems) {
+    createNodes(nodeItems, state) {
+        state = state || this.store;
         const nodeIds = [];
         const newLinks = [];
         const newChildren = [];
@@ -77,49 +74,52 @@ export default class IntrigueDocument extends ReversibleDocument {
                 delete item.children;
             }
 
-            const nodeId = this.createNode(item);
+            const nodeId = this.createNode(item, state);
             nodeIds.push(nodeId);
         });
 
-        newLinks.forEach((link) => this.createLink(link));
+        newLinks.forEach((link) => this.createLink(link, state));
 
-        newChildren.forEach((pairInfo) => this.snapNode(pairInfo));
+        newChildren.forEach((pairInfo) => this.snapNode(pairInfo, state));
 
         return nodeIds;
     }
 
-    deleteNode(nodeId) {
-        const node = { ...this.store.nodes[nodeId] };
+    deleteNode(nodeId, state) {
+        state = state || this.store;
+        const node = { ...state.nodes[nodeId] };
         const removedLinks = [];
         const unsnappedChildren = [];
         node.links.forEach((linkId) => {
-            removedLinks.push(this.removeLink(linkId));
+            removedLinks.push(this.removeLink(linkId, state));
         });
         node.children.forEach((childId) => {
             unsnappedChildren.push(
                 this.unsnapNode({
                     source: node.id,
                     target: childId,
-                }),
+                }, state),
             );
         });
         node.links = removedLinks;
         node.children = unsnappedChildren;
-        delete this.store.nodes[nodeId];
+        delete state.nodes[nodeId];
         return node;
     }
 
-    deleteNodes(nodeIds) {
+    deleteNodes(nodeIds, state) {
+        state = state || this.store;
         const nodes = [];
         nodeIds.forEach((nodeId) => {
-            const node = this.deleteNode(nodeId);
+            const node = this.deleteNode(nodeId, state);
             nodes.push(node);
         });
         return nodes;
     }
 
-    updateNode(update) {
-        const node = this.store.nodes[update.id];
+    updateNode(update, state) {
+        state = state || this.store;
+        const node = state.nodes[update.id];
         const inverseParams = {
             id: update.id,
         };
@@ -148,7 +148,8 @@ export default class IntrigueDocument extends ReversibleDocument {
         return inverseParams;
     }
 
-    updateNodes(update) {
+    updateNodes(update, state) {
+        state = state || this.store;
         const inverseParams = {
             id: [...update.id],
         };
@@ -162,7 +163,7 @@ export default class IntrigueDocument extends ReversibleDocument {
                 this.updateNode({
                     id: nodeId,
                     by: update.by,
-                });
+                }, state);
             });
         }
 
@@ -170,25 +171,26 @@ export default class IntrigueDocument extends ReversibleDocument {
             inverseParams.set = {};
             update.id.forEach((nodeId) => {
                 inverseParams.set[nodeId] = {};
-                const node = this.store.nodes[nodeId];
+                const node = state.nodes[nodeId];
                 Object.keys(update.set[nodeId]).forEach((path) => {
                     inverseParams.set[nodeId][path] = propByPath(node, path);
                 });
                 this.updateNode({
                     id: nodeId,
                     set: update.set[nodeId],
-                });
+                }, state);
             });
         }
 
         return inverseParams;
     }
 
-    snapNode(nodes) {
+    snapNode(nodes, state) {
+        state = state || this.store;
         const inverseParams = {};
         if (!nodes.source || !nodes.target) return false;
-        const parent = this.store.nodes[nodes.source];
-        const child = this.store.nodes[nodes.target];
+        const parent = state.nodes[nodes.source];
+        const child = state.nodes[nodes.target];
 
         // Areas can have multiple children
         if (parent.type === NodeTypes.Area) {
@@ -213,11 +215,12 @@ export default class IntrigueDocument extends ReversibleDocument {
         return inverseParams.source ? inverseParams : false;
     }
 
-    unsnapNode(nodes) {
+    unsnapNode(nodes, state) {
+        state = state || this.store;
         const inverseParams = {};
         if (!nodes.source || !nodes.target) return false;
-        const parent = this.store.nodes[nodes.source];
-        const child = this.store.nodes[nodes.target];
+        const parent = state.nodes[nodes.source];
+        const child = state.nodes[nodes.target];
 
         const childIndex = parent.children.indexOf(nodes.target);
         if (childIndex > -1) {
@@ -230,9 +233,10 @@ export default class IntrigueDocument extends ReversibleDocument {
         return inverseParams.source ? inverseParams : false;
     }
 
-    createLink(params) {
-        const source = this.store.nodes[params.source];
-        const target = this.store.nodes[params.target];
+    createLink(params, state) {
+        state = state || this.store;
+        const source = state.nodes[params.source];
+        const target = state.nodes[params.target];
 
         const linkId = params.id ? params.id : nanoid();
         const link = {
@@ -240,7 +244,7 @@ export default class IntrigueDocument extends ReversibleDocument {
             source: params.source,
             target: params.target,
         };
-        this.store.links[linkId] = link;
+        state.links[linkId] = link;
 
         source.links.push(linkId);
         source.links.filter((item, i) => source.links.indexOf(item) === i);
@@ -250,20 +254,20 @@ export default class IntrigueDocument extends ReversibleDocument {
         return linkId;
     }
 
-    removeLink(linkId) {
-        const link = { ...this.store.links[linkId] };
-        const source = this.store.nodes[link.source];
-        const target = this.store.nodes[link.target];
+    removeLink(linkId, state) {
+        state = state || this.store;
+        const link = { ...state.links[linkId] };
+        const source = state.nodes[link.source];
+        const target = state.nodes[link.target];
 
         source.links.splice(source.links.indexOf(linkId), 1);
         target.links.splice(target.links.indexOf(linkId), 1);
 
-        delete this.store.links[linkId];
+        delete state.links[linkId];
         return link;
     }
 
     findLinkByNodeIds(sourceId, targetId) {
-        console.log(sourceId, targetId);
         const finds = Object.keys(this.store.links).filter((linkId) => {
             const link = this.store.links[linkId];
             return link.source === sourceId && link.target === targetId;

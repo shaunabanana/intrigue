@@ -34,6 +34,7 @@ export default defineComponent({
     width: 20px;
     height: 20px;
     transition: transform 0.1s linear;
+    z-index: 9999;
 }
 
 .arrow {

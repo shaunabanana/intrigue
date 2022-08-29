@@ -29,7 +29,7 @@ export class EditorWindowManager {
             shell.openExternal(event.url);
         });
 
-        window.on('close', (e) => {
+        window.once('close', (e) => {
             if (window.documentEdited) {
                 e.preventDefault();
                 const savePath = this.getFilePath(window);
@@ -45,7 +45,12 @@ export class EditorWindowManager {
                             'showOverwriteConfirmation', 'createDirectory',
                         ],
                     });
-                    if (newSavePath) this.setFilePath(window, newSavePath, true);
+                    if (newSavePath) {
+                        this.setFilePath(window, newSavePath, true);
+                    } else {
+                        window.close();
+                        return;
+                    }
                 }
 
                 const checkSaved = () => {
