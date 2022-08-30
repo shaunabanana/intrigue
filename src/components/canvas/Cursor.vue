@@ -5,7 +5,7 @@
             transform: `translate(${x}px, ${y}px)`,
         }"
     >
-        <div class="arrow"></div>
+        <img class="arrow" src="/cursor.svg" alt="Arrow" />
         <Avatar class="avatar" variant="beam" :name="name" :size="20" />
     </div>
 </template>
@@ -40,7 +40,6 @@ export default defineComponent({
 .arrow {
     width: 20px;
     height: 24px;
-    background-image: url('~@/assets/cursor.svg');
     transform: translate(-6px, -2px) rotate(-30deg);
 }
 
