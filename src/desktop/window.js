@@ -29,6 +29,14 @@ export class EditorWindowManager {
             shell.openExternal(event.url);
         });
 
+        window.on('maximize', () => {
+            window.webContents.send('maximize');
+        });
+
+        window.on('unmaximize', () => {
+            window.webContents.send('unmaximize');
+        });
+
         window.once('close', (e) => {
             if (window.documentEdited) {
                 e.preventDefault();
