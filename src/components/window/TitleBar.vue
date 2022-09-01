@@ -1,6 +1,9 @@
 <template>
     <div class="titlebar-container">
-        <a-row v-if="electron && macOS" class="window noselect" justify="center" align="center">
+        <a-row v-if="electron && macOS"
+            class="window window-drag noselect"
+            justify="center" align="center"
+        >
             <a-col :span="8">
                 <a-button-group style="margin-left: 5rem;">
                     <a-button type="text" size="mini"
@@ -21,6 +24,13 @@
             <a-col :span="8" align="center">
                 <b>{{fileName}}</b>
             </a-col>
+            <a-col :span="8" align="right" style="padding-right: 0.5rem">
+                <CopyButton size="mini" :text="shareLink">Share</CopyButton>
+            </a-col>
+        </a-row>
+
+        <a-row v-if="electron && !macOS" class="window" justify="center" align="center">
+            <a-col :span="16"></a-col>
             <a-col :span="8" align="right" style="padding-right: 0.5rem">
                 <CopyButton size="mini" :text="shareLink">Share</CopyButton>
             </a-col>
@@ -108,9 +118,12 @@ export default {
     position: fixed;
     width: 100%;
     height: 2rem;
-    -webkit-app-region: drag;
     z-index: 10000;
     background: linear-gradient(var(--background) 10%, transparent 100%)
+}
+
+.window-drag {
+    -webkit-app-region: drag;
 }
 
 .browser {
