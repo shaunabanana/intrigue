@@ -4,6 +4,7 @@ import {
     app, BrowserWindow, shell, dialog,
 } from 'electron';
 import { basename } from 'path';
+import is from 'electron-is'
 
 export class EditorWindowManager {
     constructor() {
@@ -15,7 +16,7 @@ export class EditorWindowManager {
         const window = new BrowserWindow({
             width: 960,
             height: 720,
-            titleBarStyle: 'hidden',
+            titleBarStyle: is.macOS() ? 'hidden' : undefined,
             webPreferences: {
                 nodeIntegration: process.env.ELECTRON_NODE_INTEGRATION,
                 contextIsolation: !process.env.ELECTRON_NODE_INTEGRATION,

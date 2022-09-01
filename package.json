@@ -34,6 +34,7 @@
     "core-js": "^3.23.1",
     "curved-arrows": "^0.1.0",
     "dexie": "^3.2.2",
+    "electron-is": "^3.0.0",
     "electron-log": "^4.4.8",
     "identifiers-doi": "^0.2.1",
     "is-electron": "^2.2.1",

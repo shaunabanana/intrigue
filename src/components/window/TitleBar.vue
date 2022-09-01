@@ -1,6 +1,6 @@
 <template>
     <div class="titlebar-container">
-        <a-row v-if="electron" class="window noselect" justify="center" align="center">
+        <a-row v-if="electron && macOS" class="window noselect" justify="center" align="center">
             <a-col :span="8">
                 <a-button-group style="margin-left: 5rem;">
                     <a-button type="text" size="mini"
@@ -26,7 +26,7 @@
             </a-col>
         </a-row>
 
-        <a-row v-else class="browser noselect" justify="center" align="center">
+        <a-row v-if="!electron" class="browser noselect" justify="center" align="center">
             <a-col :span="8">
                 <a-button-group style="margin-left: 1rem;">
                     <a-button type="text" size="small"
@@ -56,6 +56,7 @@
 
 <script>
 import isElectron from 'is-electron';
+import is from 'electron-is';
 import CopyButton from './CopyButton.vue';
 
 export default {
@@ -69,6 +70,7 @@ export default {
     data() {
         return {
             electron: isElectron(),
+            macOS: is.macOS(),
             newFile: false,
         };
     },
