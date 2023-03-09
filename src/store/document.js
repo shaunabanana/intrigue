@@ -189,6 +189,7 @@ export default class IntrigueDocument extends ReversibleDocument {
         state = state || this.store;
         const inverseParams = {};
         if (!nodes.source || !nodes.target) return false;
+        if (nodes.source === nodes.target) return false;
         const parent = state.nodes[nodes.source];
         const child = state.nodes[nodes.target];
 
