@@ -3,12 +3,14 @@
         <vue-infinite-viewer
             class="canvas"
             ref="canvas"
+            :class="{panning: isPanning}"
             :style="{
                 'background-position': `${-x * zoom}px ${-y * zoom}px`,
                 'background-size': `${13 * zoom}px ${13 * zoom}px`,
                 '--resize-handle-height': `${activeNodeHeight}px`,
             }"
             :maxPinchWheel="10"
+            :useMouseDrag="false"
             @scroll="panCanvas"
             @pinch="zoomCanvas"
             @dblclick="newNode"
@@ -76,6 +78,7 @@
             :keyContainer="window"
             :hitRate="0"
             :ratio="0"
+            :dragCondition="() => !isPanning"
             @dragStart="preventSelectionWhenDragging"
             @select="selectNode"
             @selectEnd="commitSelections"
@@ -104,7 +107,7 @@ import Cursor from '@/components/canvas/Cursor.vue';
 
 export default defineComponent({
     name: 'IntrigueCanvas',
-    inject: ['document', 'store', 'state', 'send', 'editing', 'dragging', 'dropping', 'detaching', 'linking'],
+    inject: ['document', 'store', 'state', 'send', 'editing', 'dragging', 'dropping', 'detaching', 'linking', 'panning'],
     components: {
         VueInfiniteViewer,
         Moveable,
@@ -444,8 +447,8 @@ export default defineComponent({
         },
 
         startPanning(event) {
-            if (!this.editing) {
-                console.log('[Canvas][startPanning] Space pressed.', event);
+            if (!this.editing.value) {
+                // console.log('[Canvas][startPanning] Space pressed.', event);
                 this.send('space pressed');
                 event.preventDefault();
                 event.stopPropagation();
@@ -453,10 +456,11 @@ export default defineComponent({
         },
 
         stopPanning(event) {
-            if (!this.editing) {
-                console.log('[Canvas][startPanning] Space released.', event);
+            if (!this.editing.value) {
+                // console.log('[Canvas][startPanning] Space released.', event);
                 this.send('space released');
                 event.preventDefault();
+                event.stopPropagation();
             }
         },
     },
@@ -480,6 +484,14 @@ export default defineComponent({
             if (!this.store.value.nodes[this.selection[0].id]) return false;
             if (this.store.value.nodes[this.selection[0].id].parent) return false;
             return true;
+        },
+
+        isPanning() {
+            return this.panning.value;
+        },
+
+        isNotPanning() {
+            return !this.panning.value;
         },
     },
 
@@ -516,6 +528,10 @@ export default defineComponent({
     background-image: radial-gradient(var(--color-neutral-3) 10%, transparent 10%);
     /* background-size: 15px 15px; */
     /* background-position: center; */
+}
+
+.canvas.panning {
+    cursor: grab;
 }
 
 svg.links {
