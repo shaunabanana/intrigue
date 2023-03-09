@@ -23,7 +23,7 @@
 </template>
 
 <script>
-import { reactive } from 'vue';
+// import { reactive } from 'vue';
 import { stringify } from 'yaml';
 
 export default {
@@ -44,24 +44,31 @@ export default {
 
         importJSON() {
             const data = JSON.parse(this.jsonData);
-            this.document.store = reactive(data);
 
-            if (this.document.unbindSyncHandler) this.document.unbindSyncHandler();
-            if (this.document.unbindCommitHandler) {
-                this.document.unbindCommitHandler();
-                this.document.unbindCommitHandler = this.document.on('commit', this.document.commitToSyncedData.bind(this.document));
-            }
+            // if (this.document.unbindSyncHandler) this.document.unbindSyncHandler();
+            // if (this.document.unbindCommitHandler) {
+            //     this.document.unbindCommitHandler();
+            //     this.document.unbindCommitHandler =
+            // this.document.on('commit', this.document.commitToSyncedData.bind(this.document));
+            // }
 
             Object.keys(data.metadata).forEach((key) => {
-                this.document.syncedData.metadata[key] = data.metadata[key];
+                this.document.store.metadata[key] = data.metadata[key];
             });
 
             Object.keys(data.nodes).forEach((nodeId) => {
-                this.document.syncedData.nodes[nodeId] = data.nodes[nodeId];
+                this.document.store.nodes[nodeId] = {
+                    ...data.nodes[nodeId],
+                    links: [],
+                };
             });
 
             Object.keys(data.links).forEach((linkId) => {
-                this.document.syncedData.links[linkId] = data.links[linkId];
+                this.document.store.links[linkId] = data.links[linkId];
+            });
+
+            Object.keys(data.nodes).forEach((nodeId) => {
+                this.document.store.nodes[nodeId].links = data.nodes[nodeId].links;
             });
 
             this.showImportModal = false;
