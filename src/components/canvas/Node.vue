@@ -4,10 +4,10 @@
         ref="node"
         :id="node.id"
         :class="{
-            selected: selection.value.includes(node.id),
-            dropping: dropping.value === node.id,
-            noselect: editing.value !== node.id,
-            clickthrough: dragging.value && selection.value.includes(node.id),
+            selected: selection.includes(node.id),
+            dropping: dropping === node.id,
+            noselect: editing !== node.id,
+            clickthrough: dragging && selection.includes(node.id),
             selectable: !selectedByRemoteUsers,
             'remote-selected': selectedByRemoteUsers,
             'snap-top': !node.parent && node.children.length > 0,
@@ -27,7 +27,7 @@
             v-if="isNote"
             :id="node.id"
             :content="node.content"
-            :editing="editing.value === node.id"
+            :editing="editing === node.id"
             @change="parseNoteContent"
         />
 
@@ -220,7 +220,7 @@ export default defineComponent({
         this.localData.currentHeight = this.node.h ? this.node.h : this.$refs.node.clientHeight;
 
         if (this.node.parent) {
-            this.parent = this.store.value.nodes[this.node.parent];
+            this.parent = this.store.nodes[this.node.parent];
             this.observeParent();
             this.updateDimensionsFromParent();
         }
@@ -250,15 +250,16 @@ export default defineComponent({
 
         selectedByRemoteUsers() {
             // console.log(this.document.users);
-            let selected = false;
-            Object.entries(this.document.users).some(([userId, userData]) => {
-                if (userId === this.document.userId) return false;
-                if (userData.selection.includes(this.node.id)) {
-                    selected = true;
-                    return true;
-                }
-                return false;
-            });
+            const selected = false;
+            // console.log(this.document);
+            // Object.entries(this.document.users).some(([userId, userData]) => {
+            //     if (userId === this.document.userId) return false;
+            //     if (userData.selection.includes(this.node.id)) {
+            //         selected = true;
+            //         return true;
+            //     }
+            //     return false;
+            // });
             return selected;
         },
 
@@ -271,8 +272,8 @@ export default defineComponent({
         },
 
         showLinkButton() {
-            if (this.selection.value.length !== 1) return false;
-            if (!this.selection.value.includes(this.node.id)) return false;
+            if (this.selection.length !== 1) return false;
+            if (!this.selection.includes(this.node.id)) return false;
             return true;
         },
     },
@@ -305,7 +306,7 @@ export default defineComponent({
         // eslint-disable-next-line func-names
         'node.parent': function () {
             if (this.node.parent) {
-                this.parent = this.store.value.nodes[this.node.parent];
+                this.parent = this.store.nodes[this.node.parent];
                 this.observeParent();
                 this.updateDimensionsFromParent();
             } else {
@@ -370,8 +371,8 @@ export default defineComponent({
 }
 
 .selected {
-    margin: -2px;
-    border: 2px solid;
+    /* margin: -2px;
+    border: 2px solid; */
     border-color: rgb(255, 112, 143) !important;
 }
 

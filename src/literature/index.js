@@ -84,7 +84,7 @@ export function extractIdentifier(content) {
 
     // Check Zotero URL
     const zotero = linkify.find(content, 'url').filter(
-        (item) => item.value.startsWith('zotero://'),
+        (item) => item.startsWith('zotero://'),
     );
     if (zotero.length === 1 && zotero[0].value === content.trim()) {
         return {

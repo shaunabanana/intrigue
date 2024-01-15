@@ -17,7 +17,7 @@
         >
             <div class="viewport">
                 <IntrigueLink
-                    v-for="link in store.value.links"
+                    v-for="link in store.links"
                     :key="link.id"
                     :ref="link.id"
                     :source="link.source"
@@ -25,13 +25,13 @@
                 />
 
                 <IntrigueLink
-                    v-if="linking.value"
-                    :source="linking.value"
+                    v-if="linking"
+                    :source="linking"
                     target="pointer-location"
                 />
 
                 <IntrigueNode
-                    v-for="node in store.value.nodes"
+                    v-for="node in store.nodes"
                     :key="node.id"
                     :ref="node.id"
                     :node="node"
@@ -56,6 +56,10 @@
                     className="moveable"
                     :target="selection"
                     :draggable="true"
+                    :snappable="true"
+                    :elementSnapDirections="elementSnapDirections"
+                    :elementGuidelines="snappableElements"
+                    :isDisplaySnapDigit="false"
                     :resizable="shouldResize"
                     :renderDirections="['e']"
                     @clickGroup="cancelSelectionWhenClickEmpty"
@@ -132,6 +136,9 @@ export default defineComponent({
             zoom: 1,
             selection: [],
             keyboard: new Keyboard(),
+            elementSnapDirections: {
+                top: true, left: true, bottom: true, right: true,
+            },
         };
     },
 
@@ -154,8 +161,8 @@ export default defineComponent({
                 type: 'create node',
                 node: nodeId,
             });
-            // if (Object.keys(this.store.value.nodes).length === 2) {
-            //     const [source, target] = Object.keys(this.store.value.nodes);
+            // if (Object.keys(this.store.nodes).length === 2) {
+            //     const [source, target] = Object.keys(this.store.nodes);
             //     this.document.commit('createLink', { source, target });
             //     // arrowLine(`[id="${nodeIds[0]}"]`, `[id="${nodeIds[1]}"]`);
             // }
@@ -166,11 +173,11 @@ export default defineComponent({
                 type: 'dblclick node',
                 node: node.id,
             });
-            // console.log(this.state.value, this.editing.value);
+            // console.log(this.state, this.editing);
         },
 
         deleteNodes(event) {
-            if (this.editing.value) return;
+            if (this.editing) return;
             const selectedIds = this.selection.map((el) => el.id);
             console.log(`[Canvas][deleteNodes] ${selectedIds}`);
             this.selection = [];
@@ -181,14 +188,14 @@ export default defineComponent({
         },
 
         undo(event) {
-            if (this.editing.value === null) {
+            if (this.editing === null) {
                 this.document.undo();
                 event.preventDefault();
             }
         },
 
         redo(event) {
-            if (this.editing.value === null) {
+            if (this.editing === null) {
                 this.document.redo();
                 event.preventDefault();
             }
@@ -252,7 +259,7 @@ export default defineComponent({
             }
 
             // See if any nodes in the current selection will be detached from parent if moved.
-            const nodes = events.map((e) => this.store.value.nodes[e.target.id]);
+            const nodes = events.map((e) => this.store.nodes[e.target.id]);
             const nodeIds = events.map((e) => e.target.id);
             const toDetach = [];
             nodes.forEach((node) => {
@@ -284,7 +291,7 @@ export default defineComponent({
             // We don't commit here because we don't want to
             // leave undo history for rapid-firing events.
             events.forEach((e) => {
-                const node = this.store.value.nodes[e.target.id];
+                const node = this.store.nodes[e.target.id];
                 if (node.parent) return;
                 if (!this.document.localData.nodes[e.target.id]) {
                     this.document.localData.nodes[e.target.id] = {};
@@ -300,17 +307,17 @@ export default defineComponent({
             // If dropping has value, then handle that first.
             // Note that in this case, the action to be commited is snapNode,
             // not updateNodes
-            if (this.dropping.value) {
-                console.log('[Canvas][commitNodePositions] Dropping', this.dragging.value, 'on', this.dropping.value);
+            if (this.dropping) {
+                console.log('[Canvas][commitNodePositions] Dropping', this.dragging, 'on', this.dropping);
                 this.document.commit('snapNode', {
-                    source: this.dropping.value,
-                    target: this.dragging.value,
+                    source: this.dropping,
+                    target: this.dragging,
                 });
                 this.send('stop dragging');
             }
 
             // If we're detaching half-way, then don't commit any position update and just return.
-            if (this.detaching.value.length > 0) {
+            if (this.detaching.length > 0) {
                 console.log('[Canvas][commitNodePositions] Detaching ended halfway.');
                 this.send('stop detaching');
                 return;
@@ -325,7 +332,7 @@ export default defineComponent({
                 // Only update the parents, and the descendants will follow.
                 const parents = [];
                 this.selection.forEach((e) => {
-                    const node = this.store.value.nodes[e.id];
+                    const node = this.store.nodes[e.id];
                     if (!node.parent) parents.push(e.id);
                 });
                 this.document.commit('updateNodes', {
@@ -352,19 +359,19 @@ export default defineComponent({
         },
 
         tryLinking(nodeId) {
-            if (this.linking.value) {
-                if (nodeId !== this.linking.value) {
-                    console.log(`[Canvas][selectNode] Linking ${this.linking.value} to ${nodeId}`);
+            if (this.linking) {
+                if (nodeId !== this.linking) {
+                    console.log(`[Canvas][selectNode] Linking ${this.linking} to ${nodeId}`);
 
                     const linkId = this.document.findLinkByNodeIds(
-                        this.linking.value,
+                        this.linking,
                         nodeId,
                     );
                     if (linkId) {
                         this.document.commit('removeLink', linkId);
                     } else {
                         this.document.commit('createLink', {
-                            source: this.linking.value,
+                            source: this.linking,
                             target: nodeId,
                         });
                     }
@@ -373,7 +380,7 @@ export default defineComponent({
         },
 
         selectNode(e) {
-            if (this.linking.value && e.selected.length > 0) return;
+            if (this.linking && e.selected.length > 0) return;
             this.send({
                 type: 'update selection',
                 selection: e.selected.map((el) => el.id),
@@ -430,7 +437,7 @@ export default defineComponent({
         gatherDescendants(root, includeRoot) {
             const descendants = includeRoot ? new Set([root.id]) : new Set();
             root.children.forEach((childId) => {
-                const child = this.store.value.nodes[childId];
+                const child = this.store.nodes[childId];
                 const childDescendants = this.gatherDescendants(child, true);
                 childDescendants.forEach((descendantId) => {
                     descendants.add(descendantId);
@@ -447,7 +454,7 @@ export default defineComponent({
         },
 
         startPanning(event) {
-            if (!this.editing.value) {
+            if (!this.editing) {
                 // console.log('[Canvas][startPanning] Space pressed.', event);
                 this.send('space pressed');
                 event.preventDefault();
@@ -456,7 +463,7 @@ export default defineComponent({
         },
 
         stopPanning(event) {
-            if (!this.editing.value) {
+            if (!this.editing) {
                 // console.log('[Canvas][startPanning] Space released.', event);
                 this.send('space released');
                 event.preventDefault();
@@ -468,7 +475,7 @@ export default defineComponent({
     computed: {
         activeNodeHeight() {
             if (this.selection.length > 0) {
-                const node = this.store.value.nodes[this.selection[0].id];
+                const node = this.store.nodes[this.selection[0].id];
                 if (!node) return 0;
                 if (!node.currentHeight) return this.selection[0].clientHeight;
                 if (node.currentHeight <= 20) {
@@ -481,17 +488,23 @@ export default defineComponent({
 
         shouldResize() {
             if (this.selection.length !== 1) return false;
-            if (!this.store.value.nodes[this.selection[0].id]) return false;
-            if (this.store.value.nodes[this.selection[0].id].parent) return false;
+            if (!this.store.nodes[this.selection[0].id]) return false;
+            if (this.store.nodes[this.selection[0].id].parent) return false;
             return true;
         },
 
         isPanning() {
-            return this.panning.value;
+            return this.panning;
         },
 
         isNotPanning() {
-            return !this.panning.value;
+            return !this.panning;
+        },
+
+        snappableElements() {
+            console.log(document.querySelectorAll('.node'));
+            return ['.node'];
+            // return document.querySelectorAll('.node') || [];
         },
     },
 

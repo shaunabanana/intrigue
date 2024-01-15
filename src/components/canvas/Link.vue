@@ -137,11 +137,11 @@ export default {
         },
 
         mapX(value) {
-            return (value - this.x.value) * this.zoom.value;
+            return (value - this.x) * this.zoom;
         },
 
         mapY(value) {
-            return (value - this.y.value) * this.zoom.value;
+            return (value - this.y) * this.zoom;
         },
 
         getBoundingBox(element, data) {
@@ -160,9 +160,9 @@ export default {
             // const centerY = element.offsetTop + element.offsetHeight / 2;
 
             return {
-                x: data ? data.currentX : rect.x / this.zoom.value + this.x.value,
-                y: data ? data.currentY : rect.y / this.zoom.value + this.y.value,
-                w: data ? data.currentWidth + paddingX : rect.width / this.zoom.value,
+                x: data ? data.currentX : rect.x / this.zoom + this.x,
+                y: data ? data.currentY : rect.y / this.zoom + this.y,
+                w: data ? data.currentWidth + paddingX : rect.width / this.zoom,
                 h: element.offsetHeight - 2,
             };
         },

@@ -39,7 +39,7 @@ export default {
 
     methods: {
         exportJSON() {
-            console.log(JSON.stringify(this.store.value));
+            console.log(JSON.stringify(this.store));
         },
 
         importJSON() {
@@ -77,11 +77,11 @@ export default {
 
     computed: {
         currentState() {
-            return stringify(this.state.value.value);
+            return stringify(this.state.value);
         },
 
         currentContext() {
-            return stringify(this.state.value.context);
+            return stringify(this.state.context);
         },
     },
 };

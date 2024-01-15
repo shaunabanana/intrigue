@@ -1,6 +1,6 @@
 <template>
     <div class="titlebar-container">
-        <a-row v-if="electron && macOS"
+        <a-row v-if="electron"
             class="window window-drag noselect"
             justify="center" align="center"
         >
@@ -29,12 +29,12 @@
             </a-col>
         </a-row>
 
-        <a-row v-if="electron && !macOS" class="window" justify="center" align="center">
+        <!-- <a-row v-if="electron && !macOS" class="window" justify="center" align="center">
             <a-col :span="16"></a-col>
             <a-col :span="8" align="right" style="padding-right: 0.5rem">
                 <CopyButton size="mini" :text="shareLink">Share</CopyButton>
             </a-col>
-        </a-row>
+        </a-row> -->
 
         <a-row v-if="!electron" class="browser noselect" justify="center" align="center">
             <a-col :span="8">
@@ -67,6 +67,7 @@
 <script>
 import isElectron from 'is-electron';
 import is from 'electron-is';
+// import { is } from 'electron-util';
 import CopyButton from './CopyButton.vue';
 
 export default {
@@ -86,6 +87,7 @@ export default {
     },
 
     mounted() {
+        console.log(this.electron, this.macOS, is.macOS());
         const queryString = window.location.search;
         const urlParams = new URLSearchParams(queryString);
         this.newFile = !urlParams.get('document');
@@ -93,7 +95,7 @@ export default {
         this.document.on('synced', () => {
             if (this.newFile) {
                 const url = new URL(window.location.href);
-                url.searchParams.set('document', this.store.value.metadata.id);
+                url.searchParams.set('document', this.store.metadata.id);
                 window.history.replaceState(null, null, url);
             }
         });
@@ -103,11 +105,11 @@ export default {
         fileName() {
             // eslint-disable-next-line global-require
             const { basename } = require('path');
-            return this.filePath.value ? basename(this.filePath.value) : 'Untitled';
+            return this.filePath ? basename(this.filePath) : 'Untitled';
         },
 
         shareLink() {
-            return `https://intrigue-app.github.io/?document=${this.store.value.metadata.id}`;
+            return `https://intrigue-app.github.io/?document=${this.store.metadata.id}`;
         },
     },
 };

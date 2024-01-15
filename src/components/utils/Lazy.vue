@@ -11,7 +11,7 @@ export default {
     setup() {
         const shouldRender = ref(false);
         nextTick(() => {
-            shouldRender.value = true;
+            shouldRender = true;
         });
 
         return { shouldRender };
