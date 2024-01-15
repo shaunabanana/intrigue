@@ -60,6 +60,7 @@
                     :elementSnapDirections="elementSnapDirections"
                     :elementGuidelines="snappableElements"
                     :isDisplaySnapDigit="false"
+                    :snapThreshold="10"
                     :resizable="shouldResize"
                     :renderDirections="['e']"
                     @clickGroup="cancelSelectionWhenClickEmpty"
