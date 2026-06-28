@@ -40,14 +40,35 @@
             :author="node.author"
         />
 
-        <button class="link-button" v-if="showLinkButton"
-            @mousedown.stop
-            @mouseup.stop
-            @dblclick.stop
-            @click.stop="onLinkButtonClick"
-        >
-            <icon-link/>
-        </button>
+        <a-space class="node-buttons" v-if="showLinkButton">
+            <template #split>
+                <a-divider direction="vertical" :margin="0"/>
+            </template>
+            <button class="link-button"
+                @mousedown.stop
+                @mouseup.stop
+                @dblclick.stop
+                @click.stop="onLinkButtonClick"
+            >
+                <icon-link/>
+            </button>
+
+            <a-space :size="1">
+                <div class="color-swatch"
+                    v-for="color in Object.keys(colors[node.type])"
+                    :key="color"
+                    :class="{current: currentColor === color}"
+                    :style="{
+                        outlineColor: colors[node.type][color].stroke,
+                    }"
+                >
+                    <button :style="{
+                        border: `1px solid ${colors[node.type][color].stroke}`,
+                        background: colors[node.type][color].fill,
+                    }" @click="updateColor(color)"></button>
+                </div>
+            </a-space>
+        </a-space>
     </div>
 </template>
 
@@ -96,6 +117,64 @@ export default defineComponent({
             parent: null,
             parentLocalData: null,
             commitTimer: null,
+            defaultColor: {
+                note: 'yellow',
+                reference: 'blue',
+            },
+            colors: {
+                note: {
+                    red: {
+                        stroke: '#FFA4A5',
+                        fill: '#FFECEC',
+                    },
+                    orange: {
+                        stroke: '#FAAC80',
+                        fill: '#FFEEE2',
+                    },
+                    yellow: {
+                        stroke: '#E9B76D',
+                        fill: '#FAF8E5',
+                    },
+                    green: {
+                        stroke: '#ACCF82',
+                        fill: '#EAF6E6',
+                    },
+                    blue: {
+                        stroke: '#86C8FF',
+                        fill: '#E5F4FF',
+                    },
+                    purple: {
+                        stroke: '#EAA7E0',
+                        fill: '#FCECF9',
+                    },
+                },
+                reference: {
+                    red: {
+                        stroke: '#EC7D90',
+                        fill: '#F9D5D9',
+                    },
+                    orange: {
+                        stroke: '#E8884F',
+                        fill: '#F7D9C8',
+                    },
+                    yellow: {
+                        stroke: '#D19926',
+                        fill: '#FAEABF',
+                    },
+                    green: {
+                        stroke: '#7DB75B',
+                        fill: '#D4E6CB',
+                    },
+                    blue: {
+                        stroke: '#5BA9F7',
+                        fill: '#CBE3FA',
+                    },
+                    purple: {
+                        stroke: '#D483CD',
+                        fill: '#F0D7ED',
+                    },
+                },
+            },
             // content: this.node.content,
         };
     },
@@ -158,6 +237,13 @@ export default defineComponent({
             });
         },
 
+        updateColor(color) {
+            this.document.commit('updateNode', {
+                id: this.node.id,
+                set: { color },
+            });
+        },
+
         parseNoteContent(content) {
             const identifier = extractIdentifier(content);
             if (identifier) {
@@ -168,6 +254,7 @@ export default defineComponent({
                         type: NodeTypes.Reference,
                         identifier: identifier.identifier,
                         referenceType: identifier.type,
+                        color: 'blue',
                     },
                 });
 
@@ -243,9 +330,27 @@ export default defineComponent({
             return {
                 width: `${this.w}px`,
                 transform: `translate(${this.x}px, ${this.y}px)`,
-                '--bg-color': 'rgb(250, 248, 229)',
-                '--border-color': 'rgb(233, 183, 109)',
+                // '--bg-color': 'rgb(250, 248, 229)',
+                // '--border-color': 'rgb(233, 183, 109)',
+                background: this.backgroundColor,
+                border: `1px solid ${this.borderColor}`,
             };
+        },
+
+        currentColor() {
+            return this.node.color || this.defaultColor[this.node.type];
+        },
+
+        borderColor() {
+            return this.colors[this.node.type][
+                this.node.color || this.defaultColor[this.node.type]
+            ].stroke;
+        },
+
+        backgroundColor() {
+            return this.colors[this.node.type][
+                this.node.color || this.defaultColor[this.node.type]
+            ].fill;
         },
 
         selectedByRemoteUsers() {
@@ -332,8 +437,8 @@ export default defineComponent({
     border-radius: var(--node-corner);
     padding: 0.2rem 0.5rem;
     margin: -1px;
-    background: rgb(250, 248, 229);
-    border: 1px solid rgb(233, 183, 109);
+    /* background: rgb(250, 248, 229);
+    border: 1px solid rgb(233, 183, 109); */
 
     word-wrap: break-word;
     /* background: var(--bg-color); */
@@ -341,20 +446,25 @@ export default defineComponent({
     z-index: 1;
 }
 
-.link-button {
+.node-buttons {
     position: absolute;
-    /* top: calc(50% - 0.5rem); */
     top: -0.9rem;
     left: calc(100% - 0.1rem);
+    width: 10rem;
+    z-index: 100 !important;
+}
+
+.node-buttons .link-button {
+    width: 1.1rem;
+    height: 1.1rem;
     padding: 0.1rem;
-    padding-left: 0.2rem;
-    padding-right: 0.2rem;
-    border-radius: var(--node-corner);
+    padding-left: 0.15rem;
+    padding-right: 0.15rem;
+    border-radius: 100%;
     border: 0px transparent;
     background: rgb(255, 112, 143);
     color: white;
     cursor: pointer;
-    z-index: 100 !important;
 }
 
 .link-button:hover {
@@ -365,16 +475,16 @@ export default defineComponent({
     background: rgb(255, 112, 143);
 }
 
-.reference {
-    background: rgb(203, 227, 250);
-    border: 1px solid rgb(91, 169, 247);
-}
-
 .selected {
-    /* margin: -2px;
-    border: 2px solid; */
     border-color: rgb(255, 112, 143) !important;
 }
+
+/* .selected::after {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    border-color: rgb(255, 112, 143) !important;
+} */
 
 .snap-top {
     border-radius: var(--node-corner) var(--node-corner) 0 0;
@@ -409,7 +519,7 @@ export default defineComponent({
 
 .dropping {
     margin: -2px;
-    border-width: 2px;
+    border-width: 2px !important;
     z-index: 0;
 }
 
@@ -444,5 +554,28 @@ export default defineComponent({
 
 .clickthrough {
     pointer-events: none;
+}
+
+.color-swatch {
+    position: relative;
+    border-radius: 100%;
+    width: 1.1rem;
+    height: 1.1rem;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer !important;
+}
+
+.color-swatch.current {
+    outline: 1px solid;
+}
+
+.color-swatch button {
+    position: absolute;
+    border-radius: 100%;
+    width: 0.9rem;
+    height: 0.9rem;
+    cursor: pointer;
 }
 </style>
