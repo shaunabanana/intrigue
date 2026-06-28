@@ -10,19 +10,14 @@
     </div>
 </template>
 
-<script>
-import { defineComponent } from 'vue';
+<script setup>
 import Avatar from 'vue-boring-avatars';
 
-export default defineComponent({
-    name: 'IntrigueCursor',
-    components: { Avatar },
-    props: {
-        id: String,
-        name: String,
-        x: Number,
-        y: Number,
-    },
+defineProps({
+    id: String,
+    name: String,
+    x: Number,
+    y: Number,
 });
 </script>
 

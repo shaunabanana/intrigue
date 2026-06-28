@@ -9,8 +9,9 @@ module.exports = {
     },
     rules: {
         indent: ['error', 4],
+        'vue/multi-word-component-names': 'off',
         'no-console': process.env.NODE_ENV === 'production' ? 'warn' : 'off',
         'no-debugger': process.env.NODE_ENV === 'production' ? 'warn' : 'off',
-        "linebreak-style": 0
+        'linebreak-style': 0,
     },
 };

@@ -4,7 +4,7 @@ import {
     app, BrowserWindow, shell, dialog,
 } from 'electron';
 import { basename } from 'path';
-import is from 'electron-is'
+import is from 'electron-is';
 
 export class EditorWindowManager {
     constructor() {

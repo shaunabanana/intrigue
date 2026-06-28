@@ -2,24 +2,24 @@
     <div id="pointer-location" :style="{left: `${x}px`, top: `${y}px`}"/>
 </template>
 
-<script>
-export default {
-    name: 'PointerTracker',
+<script setup>
+import { onBeforeUnmount, onMounted, ref } from 'vue';
 
-    data() {
-        return {
-            x: 0,
-            y: 0,
-        };
-    },
+const x = ref(0);
+const y = ref(0);
 
-    mounted() {
-        window.addEventListener('mousemove', (event) => {
-            this.x = event.clientX + 2;
-            this.y = event.clientY + 2;
-        });
-    },
-};
+function updatePointerLocation(event) {
+    x.value = event.clientX + 2;
+    y.value = event.clientY + 2;
+}
+
+onMounted(() => {
+    window.addEventListener('mousemove', updatePointerLocation);
+});
+
+onBeforeUnmount(() => {
+    window.removeEventListener('mousemove', updatePointerLocation);
+});
 </script>
 
 <style scoped>

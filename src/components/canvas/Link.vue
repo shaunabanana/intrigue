@@ -26,185 +26,145 @@
     <!-- </teleport> -->
 </template>
 
-<script>
-// import { nextTick } from 'vue';
+<script setup>
+import {
+    computed, inject, onBeforeUnmount, onMounted, ref, watch,
+} from 'vue';
 import { getBoxToBoxArrow } from 'curved-arrows';
 
-export default {
-    name: 'IntrigueLink',
-    inject: ['document', 'store', 'x', 'y', 'zoom'],
-
-    props: {
-        source: {
-            type: String,
-            required: true,
-        },
-        target: {
-            type: String,
-            required: true,
-        },
-        text: {
-            type: String,
-            default: '',
-        },
-        color: {
-            type: String,
-            default: '#9A9A9B',
-        },
-        arrowHeadSize: {
-            type: Number,
-            default: 4,
-        },
+const props = defineProps({
+    source: {
+        type: String,
+        required: true,
     },
-
-    data() {
-        const sourceNode = this.document.localData.nodes[this.source];
-        const targetNode = this.document.localData.nodes[this.target];
-        if (!targetNode) {
-            window.addEventListener('mousemove', this.updateLine);
-        }
-
-        return {
-            sourceNode,
-            targetNode,
-            sx: 0,
-            sy: 0,
-            c1x: 0,
-            c1y: 0,
-            c2x: 0,
-            c2y: 0,
-            ex: 0,
-            ey: 0,
-            ae: 0,
-            as: 0,
-            top: 0,
-            left: 0,
-            width: 100,
-            height: 100,
-        };
+    target: {
+        type: String,
+        required: true,
     },
-
-    mounted() {
-        this.$refs.arrow.addEventListener('click', this.onClick);
-        this.updateLine();
+    text: {
+        type: String,
+        default: '',
     },
-
-    beforeUnmount() {
-        window.removeEventListener('mousemove', this.updateLine);
+    color: {
+        type: String,
+        default: '#9A9A9B',
     },
-
-    methods: {
-        onClick() {
-            console.log('click');
-        },
-
-        updateLine() {
-            const sourceElement = document.querySelector(`[id="${this.source}"]`);
-            const targetElement = document.querySelector(`[id="${this.target}"]`);
-            const sourceBox = this.getBoundingBox(sourceElement, this.sourceNode);
-            const targetBox = this.getBoundingBox(targetElement, this.targetNode);
-
-            const [sx, sy, c1x, c1y, c2x, c2y, ex, ey, ae] = getBoxToBoxArrow(
-                sourceBox.x,
-                sourceBox.y,
-                sourceBox.w,
-                sourceBox.h,
-                targetBox.x,
-                targetBox.y,
-                targetBox.w,
-                targetBox.h,
-                { padEnd: this.arrowHeadSize },
-            );
-
-            const left = Math.min(sourceBox.x, targetBox.x);
-            const right = Math.max(sourceBox.x + sourceBox.w, targetBox.x + targetBox.w);
-            const top = Math.min(sourceBox.y, targetBox.y);
-            const bottom = Math.max(sourceBox.y + sourceBox.h, targetBox.y + targetBox.h);
-
-            this.left = left;
-            this.width = right - left;
-            this.top = top;
-            this.height = bottom - top;
-            this.sx = sx - left;
-            this.sy = sy - top;
-            this.c1x = c1x - left;
-            this.c1y = c1y - top;
-            this.c2x = c2x - left;
-            this.c2y = c2y - top;
-            this.ex = ex - left;
-            this.ey = ey - top;
-            this.ae = ae;
-        },
-
-        mapX(value) {
-            return (value - this.x) * this.zoom;
-        },
-
-        mapY(value) {
-            return (value - this.y) * this.zoom;
-        },
-
-        getBoundingBox(element, data) {
-            const rect = element.getBoundingClientRect();
-            const cs = getComputedStyle(element);
-            const paddingX = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight);
-            // const paddingY = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
-
-            // const borderX = parseFloat(cs.borderLeftWidth) + parseFloat(cs.borderRightWidth);
-            // const borderY = parseFloat(cs.borderTopWidth) + parseFloat(cs.borderBottomWidth);
-
-            // const elementWidth = element.offsetWidth - paddingX - borderX;
-            // const elementHeight = element.offsetHeight - paddingY - borderY;
-
-            // const centerX = element.offsetLeft + element.offsetWidth / 2;
-            // const centerY = element.offsetTop + element.offsetHeight / 2;
-
-            return {
-                x: data ? data.currentX : rect.x / this.zoom + this.x,
-                y: data ? data.currentY : rect.y / this.zoom + this.y,
-                w: data ? data.currentWidth + paddingX : rect.width / this.zoom,
-                h: element.offsetHeight - 2,
-            };
-        },
+    arrowHeadSize: {
+        type: Number,
+        default: 4,
     },
+});
 
-    watch: {
-        sourceNode: {
-            deep: true,
-            handler() {
-                this.updateLine();
-            },
-        },
+const intrigueDocument = inject('document');
+const x = inject('x');
+const y = inject('y');
+const zoom = inject('zoom');
 
-        targetNode: {
-            deep: true,
-            handler() {
-                this.updateLine();
-            },
-        },
+const arrow = ref(null);
+const sourceNode = computed(() => intrigueDocument.localData.nodes[props.source]);
+const targetNode = computed(() => intrigueDocument.localData.nodes[props.target]);
 
-        // x: {
-        //     deep: true,
-        //     handler() {
-        //         this.updateLine();
-        //     },
-        // },
+const sx = ref(0);
+const sy = ref(0);
+const c1x = ref(0);
+const c1y = ref(0);
+const c2x = ref(0);
+const c2y = ref(0);
+const ex = ref(0);
+const ey = ref(0);
+const ae = ref(0);
+const top = ref(0);
+const left = ref(0);
+const width = ref(100);
+const height = ref(100);
 
-        // y: {
-        //     deep: true,
-        //     handler() {
-        //         this.updateLine();
-        //     },
-        // },
+function onClick() {
+    console.log('click');
+}
 
-        // zoom: {
-        //     deep: true,
-        //     handler() {
-        //         this.updateLine(true);
-        //     },
-        // },
-    },
-};
+function getBoundingBox(element, data) {
+    const rect = element.getBoundingClientRect();
+    const cs = getComputedStyle(element);
+    const paddingX = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight);
+    // const paddingY = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
+
+    // const borderX = parseFloat(cs.borderLeftWidth) + parseFloat(cs.borderRightWidth);
+    // const borderY = parseFloat(cs.borderTopWidth) + parseFloat(cs.borderBottomWidth);
+
+    // const elementWidth = element.offsetWidth - paddingX - borderX;
+    // const elementHeight = element.offsetHeight - paddingY - borderY;
+
+    // const centerX = element.offsetLeft + element.offsetWidth / 2;
+    // const centerY = element.offsetTop + element.offsetHeight / 2;
+
+    return {
+        x: data ? data.currentX : rect.x / zoom.value + x.value,
+        y: data ? data.currentY : rect.y / zoom.value + y.value,
+        w: data ? data.currentWidth + paddingX : rect.width / zoom.value,
+        h: element.offsetHeight - 2,
+    };
+}
+
+function updateLine() {
+    const sourceElement = document.querySelector(`[id="${props.source}"]`);
+    const targetElement = document.querySelector(`[id="${props.target}"]`);
+    if (!sourceElement || !targetElement) return;
+
+    const sourceBox = getBoundingBox(sourceElement, sourceNode.value);
+    const targetBox = getBoundingBox(targetElement, targetNode.value);
+
+    const arrowPoints = getBoxToBoxArrow(
+        sourceBox.x,
+        sourceBox.y,
+        sourceBox.w,
+        sourceBox.h,
+        targetBox.x,
+        targetBox.y,
+        targetBox.w,
+        targetBox.h,
+        { padEnd: props.arrowHeadSize },
+    );
+
+    const [newSx, newSy, newC1x, newC1y, newC2x, newC2y, newEx, newEy, newAe] = arrowPoints;
+    const newLeft = Math.min(sourceBox.x, targetBox.x);
+    const right = Math.max(sourceBox.x + sourceBox.w, targetBox.x + targetBox.w);
+    const newTop = Math.min(sourceBox.y, targetBox.y);
+    const bottom = Math.max(sourceBox.y + sourceBox.h, targetBox.y + targetBox.h);
+
+    left.value = newLeft;
+    width.value = right - newLeft;
+    top.value = newTop;
+    height.value = bottom - newTop;
+    sx.value = newSx - newLeft;
+    sy.value = newSy - newTop;
+    c1x.value = newC1x - newLeft;
+    c1y.value = newC1y - newTop;
+    c2x.value = newC2x - newLeft;
+    c2y.value = newC2y - newTop;
+    ex.value = newEx - newLeft;
+    ey.value = newEy - newTop;
+    ae.value = newAe;
+}
+
+onMounted(() => {
+    if (!targetNode.value) {
+        window.addEventListener('mousemove', updateLine);
+    }
+    if (arrow.value) {
+        arrow.value.addEventListener('click', onClick);
+    }
+    updateLine();
+});
+
+onBeforeUnmount(() => {
+    window.removeEventListener('mousemove', updateLine);
+    if (arrow.value) {
+        arrow.value.removeEventListener('click', onClick);
+    }
+});
+
+watch(sourceNode, updateLine, { deep: true });
+watch(targetNode, updateLine, { deep: true });
 </script>
 
 <style scoped>

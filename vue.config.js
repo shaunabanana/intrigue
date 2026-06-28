@@ -14,6 +14,7 @@ module.exports = defineConfig({
         module: {
             rules: [
                 {
+                    // eslint-disable-next-line global-require
                     test: require('path').resolve(__dirname, 'node_modules/leader-line/'),
                     use: [
                         {

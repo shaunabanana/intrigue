@@ -22,69 +22,55 @@
     </a-card>
 </template>
 
-<script>
-// import { reactive } from 'vue';
+<script setup>
+import { computed, inject, ref } from 'vue';
 import { stringify } from 'yaml';
 
-export default {
-    name: 'IntrigueDebug',
-    inject: ['document', 'state', 'store'],
+const intrigueDocument = inject('document');
+const state = inject('state');
+const store = inject('store');
 
-    data() {
-        return {
-            showImportModal: false,
-            jsonData: '',
+const showImportModal = ref(false);
+const jsonData = ref('');
+
+const currentState = computed(() => stringify(state.value.value));
+const currentContext = computed(() => stringify(state.value.context));
+
+function exportJSON() {
+    console.log(JSON.stringify(store.value));
+}
+
+function importJSON() {
+    const data = JSON.parse(jsonData.value);
+
+    // if (intrigueDocument.unbindSyncHandler) intrigueDocument.unbindSyncHandler();
+    // if (intrigueDocument.unbindCommitHandler) {
+    //     intrigueDocument.unbindCommitHandler();
+    //     intrigueDocument.unbindCommitHandler =
+    // intrigueDocument.on('commit', intrigueDocument.commitToSyncedData.bind(intrigueDocument));
+    // }
+
+    Object.keys(data.metadata).forEach((key) => {
+        intrigueDocument.store.metadata[key] = data.metadata[key];
+    });
+
+    Object.keys(data.nodes).forEach((nodeId) => {
+        intrigueDocument.store.nodes[nodeId] = {
+            ...data.nodes[nodeId],
+            links: [],
         };
-    },
+    });
 
-    methods: {
-        exportJSON() {
-            console.log(JSON.stringify(this.store));
-        },
+    Object.keys(data.links).forEach((linkId) => {
+        intrigueDocument.store.links[linkId] = data.links[linkId];
+    });
 
-        importJSON() {
-            const data = JSON.parse(this.jsonData);
+    Object.keys(data.nodes).forEach((nodeId) => {
+        intrigueDocument.store.nodes[nodeId].links = data.nodes[nodeId].links;
+    });
 
-            // if (this.document.unbindSyncHandler) this.document.unbindSyncHandler();
-            // if (this.document.unbindCommitHandler) {
-            //     this.document.unbindCommitHandler();
-            //     this.document.unbindCommitHandler =
-            // this.document.on('commit', this.document.commitToSyncedData.bind(this.document));
-            // }
-
-            Object.keys(data.metadata).forEach((key) => {
-                this.document.store.metadata[key] = data.metadata[key];
-            });
-
-            Object.keys(data.nodes).forEach((nodeId) => {
-                this.document.store.nodes[nodeId] = {
-                    ...data.nodes[nodeId],
-                    links: [],
-                };
-            });
-
-            Object.keys(data.links).forEach((linkId) => {
-                this.document.store.links[linkId] = data.links[linkId];
-            });
-
-            Object.keys(data.nodes).forEach((nodeId) => {
-                this.document.store.nodes[nodeId].links = data.nodes[nodeId].links;
-            });
-
-            this.showImportModal = false;
-        },
-    },
-
-    computed: {
-        currentState() {
-            return stringify(this.state.value);
-        },
-
-        currentContext() {
-            return stringify(this.state.context);
-        },
-    },
-};
+    showImportModal.value = false;
+}
 </script>
 
 <style scoped>

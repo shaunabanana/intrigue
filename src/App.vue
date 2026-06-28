@@ -5,8 +5,11 @@
     <Debug v-if="debug"/>
 </template>
 
-<script>
-import { computed } from 'vue';
+<script setup>
+import {
+    computed, onBeforeUnmount, onMounted, provide, reactive, ref, watch,
+} from 'vue';
+import { Message } from '@arco-design/web-vue';
 import isElectron from 'is-electron';
 
 // import Avatar from 'vue-boring-avatars';
@@ -24,168 +27,138 @@ import DocumentCanvas from '@/components/canvas/Canvas.vue';
 import PointerTracker from '@/components/canvas/PointerTracker.vue';
 import Debug from '@/components/utils/Debug.vue';
 
-export default {
-    name: 'App',
-    components: {
-        TitleBar,
-        DocumentCanvas,
-        PointerTracker,
-        Debug,
-    },
+const intrigueDocument = reactive(new IntrigueDocument());
+const store = computed(() => intrigueDocument.store);
+const appState = reactive({
+    users: [],
+    loading: true,
+    title: '',
+    docId: undefined,
+});
+const debug = ref(false);
+const filePath = ref(undefined);
+const { state, send } = useMachine(intrigueMachine);
 
-    data() {
-        const document = new IntrigueDocument();
+provide('document', intrigueDocument);
+provide('store', store);
+provide('state', computed(() => state.value));
+provide('send', send);
+provide('filePath', computed(() => filePath.value));
 
-        return {
-            document,
-            store: document.store,
-            users: [],
-            loading: true,
-            debug: false,
-            title: '',
-            docId: undefined,
-            filePath: undefined,
-        };
-    },
+Object.keys(state.value.context).forEach((key) => {
+    provide(key, computed(() => state.value.context[key]));
+});
 
-    provide() {
-        // use function syntax so that we can access `this`
-        const injections = {
-            document: this.document,
-            store: computed(() => this.document.store),
-            state: computed(() => this.state),
-            send: this.send,
-            filePath: computed(() => this.filePath),
-        };
+if (isElectron()) {
+    import('electron-log').then((log) => {
+        Object.assign(console, log.functions);
+        log.catchErrors();
+    });
+}
 
-        Object.keys(this.state.context).forEach((key) => {
-            injections[key] = computed(() => this.state.context[key]);
-        });
+function broadcastUsername() {
+    const fruit = getRandomFruitsName('en', { maxWords: 1 });
+    intrigueDocument.updateAwareness('name', `Anonymous ${fruit}`);
+}
 
-        return injections;
-    },
+function preventSpaceScroll(event) {
+    if (event.code === 'Space' && event.target === document.body) {
+        event.preventDefault();
+    }
+}
 
-    setup() {
-        if (isElectron()) {
-            import('electron-log').then((log) => {
-                Object.assign(console, log.functions);
-                log.catchErrors();
-            });
-        }
+onMounted(() => {
+    intrigueDocument.on('synced', () => {
+        broadcastUsername();
+        appState.loading = false;
+    });
 
-        const { state, send } = useMachine(intrigueMachine);
-        return { state, send };
-    },
-
-    methods: {
-        broadcastUsername() {
-            const fruit = getRandomFruitsName('en', { maxWords: 1 });
-            this.document.updateAwareness('name', `Anonymous ${fruit}`);
-        },
-    },
-
-    mounted() {
-        this.document.on('synced', () => {
-            this.broadcastUsername();
-            this.loading = false;
-        });
-
-        this.document.on('commit', () => {
-            if (isElectron()) {
-                // eslint-disable-next-line import/no-extraneous-dependencies, global-require
-                import('electron').then(({ ipcRenderer }) => {
-                    ipcRenderer.send('set-edited', true);
-                });
-            }
-        });
-
-        this.document.on('saved', () => {
-            this.$message.success('Saved!');
-            if (isElectron()) {
-                // eslint-disable-next-line import/no-extraneous-dependencies, global-require
-                import('electron').then(({ ipcRenderer }) => {
-                    ipcRenderer.send('set-edited', false);
-                });
-            }
-        });
-
-        // Prevent space from causing scrolling down behavior.
-        window.addEventListener('keydown', (event) => {
-            if (event.code === 'Space' && event.target === document.body) {
-                event.preventDefault();
-            }
-        });
-
+    intrigueDocument.on('commit', () => {
         if (isElectron()) {
             // eslint-disable-next-line import/no-extraneous-dependencies, global-require
             import('electron').then(({ ipcRenderer }) => {
-                ipcRenderer.invoke('get-packaged').then((isPackaged) => {
-                    console.log(`[App][ipcRenderer@get-packaged] ${isPackaged}`);
-                    this.debug = !isPackaged;
-                });
+                ipcRenderer.send('set-edited', true);
+            });
+        }
+    });
 
-                ipcRenderer.on('new-file', () => {
-                    console.log('[App][ipcRenderer@set-filepath] This is a new empty file.');
-                    this.document.initSync();
-                });
+    intrigueDocument.on('saved', () => {
+        Message.success('Saved!');
+        if (isElectron()) {
+            // eslint-disable-next-line import/no-extraneous-dependencies, global-require
+            import('electron').then(({ ipcRenderer }) => {
+                ipcRenderer.send('set-edited', false);
+            });
+        }
+    });
 
-                ipcRenderer.on('set-filepath', (_, filePath, overwrite) => {
-                    console.log(`[App][ipcRenderer@set-filepath] filePath is ${filePath}.`);
-                    this.filePath = filePath;
-                    this.document.initPersistence(filePath, overwrite);
-                });
+    // Prevent space from causing scrolling down behavior.
+    window.addEventListener('keydown', preventSpaceScroll);
 
-                ipcRenderer.on('save-file', () => {
-                    console.log('[App][ipcRenderer@save-file] Manual save to disk.');
-                    this.document.saveToDisk();
-                });
+    if (isElectron()) {
+        // eslint-disable-next-line import/no-extraneous-dependencies, global-require
+        import('electron').then(({ ipcRenderer }) => {
+            ipcRenderer.invoke('get-packaged').then((isPackaged) => {
+                console.log(`[App][ipcRenderer@get-packaged] ${isPackaged}`);
+                debug.value = !isPackaged;
+            });
+
+            ipcRenderer.on('new-file', () => {
+                console.log('[App][ipcRenderer@set-filepath] This is a new empty file.');
+                intrigueDocument.initSync();
+            });
+
+            ipcRenderer.on('set-filepath', (_, newFilePath, overwrite) => {
+                console.log(`[App][ipcRenderer@set-filepath] filePath is ${newFilePath}.`);
+                filePath.value = newFilePath;
+                intrigueDocument.initPersistence(newFilePath, overwrite);
+            });
+
+            ipcRenderer.on('save-file', () => {
+                console.log('[App][ipcRenderer@save-file] Manual save to disk.');
+                intrigueDocument.saveToDisk();
+            });
+        });
+    } else {
+        const queryString = window.location.search;
+        const urlParams = new URLSearchParams(queryString);
+        console.log(`[App][mounted] urlParams.document is ${urlParams.get('document')}`);
+        intrigueDocument.initSync(urlParams.get('document'));
+
+        if (urlParams.get('document') === 'tutorial') {
+            console.log('[App][mounted@web] Loading tutorial data...');
+            Object.keys(tutorialData.nodes).forEach((nodeId) => {
+                store.value.nodes[nodeId] = tutorialData.nodes[nodeId];
+            });
+
+            Object.keys(tutorialData.links).forEach((linkId) => {
+                store.value.links[linkId] = tutorialData.links[linkId];
             });
         } else {
-            const queryString = window.location.search;
-            const urlParams = new URLSearchParams(queryString);
-            console.log(`[App][mounted] urlParams.document is ${urlParams.get('document')}`);
-            this.document.initSync(urlParams.get('document'));
-
-            if (urlParams.get('document') === 'tutorial') {
-                console.log('[App][mounted@web] Loading tutorial data...');
-                Object.keys(tutorialData.nodes).forEach((nodeId) => {
-                    this.store.nodes[nodeId] = tutorialData.nodes[nodeId];
-                });
-
-                Object.keys(tutorialData.links).forEach((linkId) => {
-                    this.store.links[linkId] = tutorialData.links[linkId];
-                });
-            } else {
-                this.document.initPersistence(urlParams.get('document'));
-            }
+            intrigueDocument.initPersistence(urlParams.get('document'));
         }
-    },
+    }
+});
 
-    beforeUnmount() {
-        console.log('[App][beforeUnmount] Closing document...');
-        this.document.close();
-        console.log('[App][beforeUnmount] Document closed.');
-    },
+onBeforeUnmount(() => {
+    console.log('[App][beforeUnmount] Closing document...');
+    window.removeEventListener('keydown', preventSpaceScroll);
+    intrigueDocument.close();
+    console.log('[App][beforeUnmount] Document closed.');
+});
 
-    watch: {
-        'document.users': {
-            deep: true,
-            handler() {
-                const users = [];
-                Object.keys(this.document.users).forEach((userId) => {
-                    users.push(this.document.users[userId]);
-                });
-                this.users = users;
-            },
-        },
-        'document.metadata.name': {
-            deep: true,
-            handler() {
-                this.title = this.document.metadata.name;
-            },
-        },
-    },
-};
+watch(() => intrigueDocument.users, () => {
+    if (!intrigueDocument.users) return;
+    const users = [];
+    Object.keys(intrigueDocument.users).forEach((userId) => {
+        users.push(intrigueDocument.users[userId]);
+    });
+    appState.users = users;
+}, { deep: true });
+
+watch(() => intrigueDocument.store.metadata.name, () => {
+    appState.title = intrigueDocument.store.metadata.name;
+}, { deep: true });
 </script>
 
 <style lang="scss">

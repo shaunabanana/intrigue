@@ -64,55 +64,41 @@
     </div>
 </template>
 
-<script>
+<script setup>
+import {
+    computed, inject, onMounted, ref,
+} from 'vue';
 import isElectron from 'is-electron';
 import is from 'electron-is';
+import { basename } from 'path';
 // import { is } from 'electron-util';
 import CopyButton from './CopyButton.vue';
 
-export default {
-    name: 'TitleBar',
-    inject: ['store', 'document', 'selection', 'filePath'],
+const store = inject('store');
+const document = inject('document');
+const filePath = inject('filePath');
 
-    components: {
-        CopyButton,
-    },
+const electron = isElectron();
+const macOS = is.macOS();
+const newFile = ref(false);
 
-    data() {
-        return {
-            electron: isElectron(),
-            macOS: is.macOS(),
-            newFile: false,
-        };
-    },
+const fileName = computed(() => (filePath.value ? basename(filePath.value) : 'Untitled'));
+const shareLink = computed(() => `https://intrigue-app.github.io/?document=${store.value.metadata.id}`);
 
-    mounted() {
-        console.log(this.electron, this.macOS, is.macOS());
-        const queryString = window.location.search;
-        const urlParams = new URLSearchParams(queryString);
-        this.newFile = !urlParams.get('document');
+onMounted(() => {
+    console.log(electron, macOS, is.macOS());
+    const queryString = window.location.search;
+    const urlParams = new URLSearchParams(queryString);
+    newFile.value = !urlParams.get('document');
 
-        this.document.on('synced', () => {
-            if (this.newFile) {
-                const url = new URL(window.location.href);
-                url.searchParams.set('document', this.store.metadata.id);
-                window.history.replaceState(null, null, url);
-            }
-        });
-    },
-
-    computed: {
-        fileName() {
-            // eslint-disable-next-line global-require
-            const { basename } = require('path');
-            return this.filePath ? basename(this.filePath) : 'Untitled';
-        },
-
-        shareLink() {
-            return `https://intrigue-app.github.io/?document=${this.store.metadata.id}`;
-        },
-    },
-};
+    document.on('synced', () => {
+        if (newFile.value) {
+            const url = new URL(window.location.href);
+            url.searchParams.set('document', store.value.metadata.id);
+            window.history.replaceState(null, null, url);
+        }
+    });
+});
 </script>
 
 <style scoped>

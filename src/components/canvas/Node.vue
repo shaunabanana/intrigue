@@ -1,7 +1,7 @@
 <template>
     <div
         class="node"
-        ref="node"
+        ref="nodeElement"
         :id="node.id"
         :class="{
             selected: selection.includes(node.id),
@@ -72,8 +72,10 @@
     </div>
 </template>
 
-<script>
-import { defineComponent } from 'vue';
+<script setup>
+import {
+    computed, inject, onBeforeUnmount, onDeactivated, onMounted, ref, watch,
+} from 'vue';
 import { NodeTypes } from '@/store';
 
 import Note from '@/components/canvas/node/Note.vue';
@@ -81,348 +83,351 @@ import Reference from '@/components/canvas/node/Reference.vue';
 
 import { extractIdentifier, fetchLiteratureInfo } from '@/literature';
 
-export default defineComponent({
-    name: 'IntrigueNode',
-    inject: ['document', 'store', 'state', 'send', 'editing', 'dragging', 'dropping', 'selection'],
-    components: {
-        Note,
-        Reference,
+const props = defineProps({
+    node: {
+        type: Object,
+        required: true,
     },
-    props: {
-        node: {
-            type: Object,
-            required: true,
-        },
-        selected: {
-            type: Boolean,
-            default: false,
-        },
-    },
-
-    data() {
-        if (!this.document.localData.nodes[this.node.id]) {
-            this.document.localData.nodes[this.node.id] = {
-                currentX: this.node.x,
-                currentY: this.node.y,
-                currentWidth: this.node.w,
-                currentHeight: this.node.h,
-            };
-        }
-        return {
-            x: this.node.x,
-            y: this.node.y,
-            w: this.node.w,
-            h: this.node.h,
-            localData: this.document.localData.nodes[this.node.id],
-            parent: null,
-            parentLocalData: null,
-            commitTimer: null,
-            defaultColor: {
-                note: 'yellow',
-                reference: 'blue',
-            },
-            colors: {
-                note: {
-                    red: {
-                        stroke: '#FFA4A5',
-                        fill: '#FFECEC',
-                    },
-                    orange: {
-                        stroke: '#FAAC80',
-                        fill: '#FFEEE2',
-                    },
-                    yellow: {
-                        stroke: '#E9B76D',
-                        fill: '#FAF8E5',
-                    },
-                    green: {
-                        stroke: '#ACCF82',
-                        fill: '#EAF6E6',
-                    },
-                    blue: {
-                        stroke: '#86C8FF',
-                        fill: '#E5F4FF',
-                    },
-                    purple: {
-                        stroke: '#EAA7E0',
-                        fill: '#FCECF9',
-                    },
-                },
-                reference: {
-                    red: {
-                        stroke: '#EC7D90',
-                        fill: '#F9D5D9',
-                    },
-                    orange: {
-                        stroke: '#E8884F',
-                        fill: '#F7D9C8',
-                    },
-                    yellow: {
-                        stroke: '#D19926',
-                        fill: '#FAEABF',
-                    },
-                    green: {
-                        stroke: '#7DB75B',
-                        fill: '#D4E6CB',
-                    },
-                    blue: {
-                        stroke: '#5BA9F7',
-                        fill: '#CBE3FA',
-                    },
-                    purple: {
-                        stroke: '#D483CD',
-                        fill: '#F0D7ED',
-                    },
-                },
-            },
-            // content: this.node.content,
-        };
-    },
-
-    methods: {
-        onMouseEnter() {
-            this.send({
-                type: 'drop enter',
-                node: this.node.id,
-            });
-        },
-
-        onMouseLeave() {
-            this.send({
-                type: 'drop leave',
-                node: this.node.id,
-            });
-        },
-
-        onLinkButtonClick() {
-            this.send('start linking', { node: this.node.id });
-        },
-
-        observeParent() {
-            this.parentLocalData = this.document.localData.nodes[this.parent.id];
-            this.parentWatchers = [
-                this.$watch('parentLocalData.currentX', this.updateDimensionsFromParent),
-                this.$watch('parentLocalData.currentY', this.updateDimensionsFromParent),
-                this.$watch('parentLocalData.currentWidth', this.updateDimensionsFromParent),
-                this.$watch('parentLocalData.currentHeight', this.updateDimensionsFromParent),
-            ];
-        },
-
-        updateDimensions() {
-            if (!this.$refs.node) return;
-            this.localData.currentHeight = this.$refs.node.clientHeight;
-            this.$emit('update-dimensions');
-        },
-
-        updateDimensionsFromParent() {
-            this.localData.currentX = this.parentLocalData.currentX;
-            this.localData.currentY = this.parentLocalData.currentY
-                + this.parentLocalData.currentHeight + 5;
-            this.localData.currentWidth = this.parentLocalData.currentWidth;
-            this.localData.currentHeight = this.$refs.node.clientHeight;
-
-            if (this.commitTimer) {
-                clearTimeout(this.commitTimer);
-            }
-            this.commitTimer = setTimeout(this.commitUpdatedDimensions, 300);
-        },
-
-        commitUpdatedDimensions() {
-            this.document.updateNode({
-                id: this.node.id,
-                set: {
-                    x: this.localData.currentX,
-                    y: this.localData.currentY,
-                },
-            });
-        },
-
-        updateColor(color) {
-            this.document.commit('updateNode', {
-                id: this.node.id,
-                set: { color },
-            });
-        },
-
-        parseNoteContent(content) {
-            const identifier = extractIdentifier(content);
-            if (identifier) {
-                console.log(`[Node][parseNoteContent@extractIdentifier] ${JSON.stringify(identifier)}`);
-                this.document.commit('updateNode', {
-                    id: this.node.id,
-                    set: {
-                        type: NodeTypes.Reference,
-                        identifier: identifier.identifier,
-                        referenceType: identifier.type,
-                        color: 'blue',
-                    },
-                });
-
-                if (identifier.type === 'zotero') {
-                    this.document.commit('updateNode', {
-                        id: this.node.id,
-                        set: {
-                            title: identifier.title,
-                            author: identifier.author,
-                            identifier: identifier.identifier,
-                            record: identifier,
-                        },
-                    });
-                } else if (identifier.type === 'zotero-link') {
-                    this.document.commit('updateNode', {
-                        id: this.node.id,
-                        set: {
-                            title: undefined,
-                            author: undefined,
-                            identifier: identifier.identifier,
-                            record: identifier,
-                        },
-                    });
-                } else {
-                    fetchLiteratureInfo(identifier.type, identifier.identifier).then((info) => {
-                        console.log(`[Node][parseNoteContent@fetchLiteratureInfo] ${info}`);
-                        this.document.commit('updateNode', {
-                            id: this.node.id,
-                            set: {
-                                title: info.title,
-                                author: info.author,
-                                identifier: info.identifier
-                                    ? info.identifier : identifier.identifier,
-                                record: info,
-                            },
-                        });
-                    });
-                }
-            }
-        },
-    },
-
-    mounted() {
-        // console.log('Mounted', this.node.id);
-        this.observer = new ResizeObserver(this.updateDimensions);
-        this.observer.observe(this.$refs.node);
-
-        this.localData.currentX = this.node.x;
-        this.localData.currentY = this.node.y;
-        this.localData.currentHeight = this.node.h ? this.node.h : this.$refs.node.clientHeight;
-
-        if (this.node.parent) {
-            this.parent = this.store.nodes[this.node.parent];
-            this.observeParent();
-            this.updateDimensionsFromParent();
-        }
-    },
-
-    breforeUnmount() {
-        console.log('[Node][breforeUnmount] Unmounting', this.node.id);
-        this.observer.disconnect();
-        this.parentWatchers.forEach((removeParentWatcher) => removeParentWatcher());
-    },
-
-    deactivated() {
-        console.log('[Node][deactivated] Deactivated', this.node.id);
-        this.observer.disconnect();
-        this.parentWatchers.forEach((removeParentWatcher) => removeParentWatcher());
-    },
-
-    computed: {
-        styles() {
-            return {
-                width: `${this.w}px`,
-                transform: `translate(${this.x}px, ${this.y}px)`,
-                // '--bg-color': 'rgb(250, 248, 229)',
-                // '--border-color': 'rgb(233, 183, 109)',
-                background: this.backgroundColor,
-                border: `1px solid ${this.borderColor}`,
-            };
-        },
-
-        currentColor() {
-            return this.node.color || this.defaultColor[this.node.type];
-        },
-
-        borderColor() {
-            return this.colors[this.node.type][
-                this.node.color || this.defaultColor[this.node.type]
-            ].stroke;
-        },
-
-        backgroundColor() {
-            return this.colors[this.node.type][
-                this.node.color || this.defaultColor[this.node.type]
-            ].fill;
-        },
-
-        selectedByRemoteUsers() {
-            // console.log(this.document.users);
-            const selected = false;
-            // console.log(this.document);
-            // Object.entries(this.document.users).some(([userId, userData]) => {
-            //     if (userId === this.document.userId) return false;
-            //     if (userData.selection.includes(this.node.id)) {
-            //         selected = true;
-            //         return true;
-            //     }
-            //     return false;
-            // });
-            return selected;
-        },
-
-        isNote() {
-            return this.node.type === NodeTypes.Note;
-        },
-
-        isReference() {
-            return this.node.type === NodeTypes.Reference;
-        },
-
-        showLinkButton() {
-            if (this.selection.length !== 1) return false;
-            if (!this.selection.includes(this.node.id)) return false;
-            return true;
-        },
-    },
-
-    watch: {
-        // eslint-disable-next-line func-names
-        'localData.currentX': function () {
-            this.x = this.localData.currentX;
-        },
-        // eslint-disable-next-line func-names
-        'localData.currentY': function () {
-            this.y = this.localData.currentY;
-        },
-        // eslint-disable-next-line func-names
-        'localData.currentWidth': function () {
-            this.w = this.localData.currentWidth;
-        },
-        // eslint-disable-next-line func-names
-        'node.x': function () {
-            this.localData.currentX = this.node.x;
-        },
-        // eslint-disable-next-line func-names
-        'node.y': function () {
-            this.localData.currentY = this.node.y;
-        },
-        // eslint-disable-next-line func-names
-        'node.w': function () {
-            this.localData.currentWidth = this.node.w;
-        },
-        // eslint-disable-next-line func-names
-        'node.parent': function () {
-            if (this.node.parent) {
-                this.parent = this.store.nodes[this.node.parent];
-                this.observeParent();
-                this.updateDimensionsFromParent();
-            } else {
-                this.parent = null;
-                this.parentWatchers.forEach((removeParentWatcher) => removeParentWatcher());
-                this.parentWatchers = [];
-                this.parentLocalData = null;
-            }
-        },
+    selected: {
+        type: Boolean,
+        default: false,
     },
 });
+
+const emit = defineEmits(['update-dimensions']);
+
+const intrigueDocument = inject('document');
+const store = inject('store');
+const send = inject('send');
+const dragging = inject('dragging');
+const dropping = inject('dropping');
+const editing = inject('editing');
+const selection = inject('selection');
+
+if (!intrigueDocument.localData.nodes[props.node.id]) {
+    intrigueDocument.localData.nodes[props.node.id] = {
+        currentX: props.node.x,
+        currentY: props.node.y,
+        currentWidth: props.node.w,
+        currentHeight: props.node.h,
+    };
+}
+
+const nodeElement = ref(null);
+const x = ref(props.node.x);
+const y = ref(props.node.y);
+const w = ref(props.node.w);
+const localData = ref(intrigueDocument.localData.nodes[props.node.id]);
+const parent = ref(null);
+const parentLocalData = ref(null);
+const commitTimer = ref(null);
+const observer = ref(null);
+const parentWatchers = ref([]);
+
+const defaultColor = {
+    note: 'yellow',
+    reference: 'blue',
+};
+
+const colors = {
+    note: {
+        red: {
+            stroke: '#FFA4A5',
+            fill: '#FFECEC',
+        },
+        orange: {
+            stroke: '#FAAC80',
+            fill: '#FFEEE2',
+        },
+        yellow: {
+            stroke: '#E9B76D',
+            fill: '#FAF8E5',
+        },
+        green: {
+            stroke: '#ACCF82',
+            fill: '#EAF6E6',
+        },
+        blue: {
+            stroke: '#86C8FF',
+            fill: '#E5F4FF',
+        },
+        purple: {
+            stroke: '#EAA7E0',
+            fill: '#FCECF9',
+        },
+    },
+    reference: {
+        red: {
+            stroke: '#EC7D90',
+            fill: '#F9D5D9',
+        },
+        orange: {
+            stroke: '#E8884F',
+            fill: '#F7D9C8',
+        },
+        yellow: {
+            stroke: '#D19926',
+            fill: '#FAEABF',
+        },
+        green: {
+            stroke: '#7DB75B',
+            fill: '#D4E6CB',
+        },
+        blue: {
+            stroke: '#5BA9F7',
+            fill: '#CBE3FA',
+        },
+        purple: {
+            stroke: '#D483CD',
+            fill: '#F0D7ED',
+        },
+    },
+};
+
+const currentColor = computed(() => props.node.color || defaultColor[props.node.type]);
+const borderColor = computed(() => colors[props.node.type][currentColor.value].stroke);
+const backgroundColor = computed(() => colors[props.node.type][currentColor.value].fill);
+const styles = computed(() => ({
+    width: `${w.value}px`,
+    transform: `translate(${x.value}px, ${y.value}px)`,
+    // '--bg-color': 'rgb(250, 248, 229)',
+    // '--border-color': 'rgb(233, 183, 109)',
+    background: backgroundColor.value,
+    border: `1px solid ${borderColor.value}`,
+}));
+
+const selectedByRemoteUsers = computed(() => {
+    // console.log(intrigueDocument.users);
+    const selected = false;
+    // console.log(intrigueDocument);
+    // Object.entries(intrigueDocument.users).some(([userId, userData]) => {
+    //     if (userId === intrigueDocument.userId) return false;
+    //     if (userData.selection.includes(props.node.id)) {
+    //         selected = true;
+    //         return true;
+    //     }
+    //     return false;
+    // });
+    return selected;
+});
+const isNote = computed(() => props.node.type === NodeTypes.Note);
+const isReference = computed(() => props.node.type === NodeTypes.Reference);
+const showLinkButton = computed(() => {
+    if (selection.value.length !== 1) return false;
+    if (!selection.value.includes(props.node.id)) return false;
+    return true;
+});
+
+function cleanupParentWatchers() {
+    parentWatchers.value.forEach((removeParentWatcher) => removeParentWatcher());
+    parentWatchers.value = [];
+}
+
+function onMouseEnter() {
+    send({
+        type: 'drop enter',
+        node: props.node.id,
+    });
+}
+
+function onMouseLeave() {
+    send({
+        type: 'drop leave',
+        node: props.node.id,
+    });
+}
+
+function onLinkButtonClick() {
+    send('start linking', { node: props.node.id });
+}
+
+function commitUpdatedDimensions() {
+    intrigueDocument.updateNode({
+        id: props.node.id,
+        set: {
+            x: localData.value.currentX,
+            y: localData.value.currentY,
+        },
+    });
+}
+
+function updateDimensionsFromParent() {
+    if (!parentLocalData.value || !nodeElement.value) return;
+    localData.value.currentX = parentLocalData.value.currentX;
+    localData.value.currentY = parentLocalData.value.currentY
+        + parentLocalData.value.currentHeight + 5;
+    localData.value.currentWidth = parentLocalData.value.currentWidth;
+    localData.value.currentHeight = nodeElement.value.clientHeight;
+
+    if (commitTimer.value) {
+        clearTimeout(commitTimer.value);
+    }
+    commitTimer.value = setTimeout(commitUpdatedDimensions, 300);
+}
+
+function observeParent() {
+    if (!parent.value) return;
+    cleanupParentWatchers();
+    parentLocalData.value = intrigueDocument.localData.nodes[parent.value.id];
+    parentWatchers.value = [
+        watch(
+            () => parentLocalData.value && parentLocalData.value.currentX,
+            updateDimensionsFromParent,
+        ),
+        watch(
+            () => parentLocalData.value && parentLocalData.value.currentY,
+            updateDimensionsFromParent,
+        ),
+        watch(
+            () => parentLocalData.value && parentLocalData.value.currentWidth,
+            updateDimensionsFromParent,
+        ),
+        watch(
+            () => parentLocalData.value && parentLocalData.value.currentHeight,
+            updateDimensionsFromParent,
+        ),
+    ];
+}
+
+function updateDimensions() {
+    if (!nodeElement.value) return;
+    localData.value.currentHeight = nodeElement.value.clientHeight;
+    emit('update-dimensions');
+}
+
+function updateColor(color) {
+    intrigueDocument.commit('updateNode', {
+        id: props.node.id,
+        set: { color },
+    });
+}
+
+function parseNoteContent(content) {
+    const identifier = extractIdentifier(content);
+    if (identifier) {
+        console.log(`[Node][parseNoteContent@extractIdentifier] ${JSON.stringify(identifier)}`);
+        intrigueDocument.commit('updateNode', {
+            id: props.node.id,
+            set: {
+                type: NodeTypes.Reference,
+                identifier: identifier.identifier,
+                referenceType: identifier.type,
+                color: 'blue',
+            },
+        });
+
+        if (identifier.type === 'zotero') {
+            intrigueDocument.commit('updateNode', {
+                id: props.node.id,
+                set: {
+                    title: identifier.title,
+                    author: identifier.author,
+                    identifier: identifier.identifier,
+                    record: identifier,
+                },
+            });
+        } else if (identifier.type === 'zotero-link') {
+            intrigueDocument.commit('updateNode', {
+                id: props.node.id,
+                set: {
+                    title: undefined,
+                    author: undefined,
+                    identifier: identifier.identifier,
+                    record: identifier,
+                },
+            });
+        } else {
+            fetchLiteratureInfo(identifier.type, identifier.identifier).then((info) => {
+                console.log(`[Node][parseNoteContent@fetchLiteratureInfo] ${info}`);
+                intrigueDocument.commit('updateNode', {
+                    id: props.node.id,
+                    set: {
+                        title: info.title,
+                        author: info.author,
+                        identifier: info.identifier
+                            ? info.identifier : identifier.identifier,
+                        record: info,
+                    },
+                });
+            });
+        }
+    }
+}
+
+function cleanup() {
+    if (observer.value) {
+        observer.value.disconnect();
+        observer.value = null;
+    }
+    cleanupParentWatchers();
+    if (commitTimer.value) {
+        clearTimeout(commitTimer.value);
+        commitTimer.value = null;
+    }
+}
+
+onMounted(() => {
+    // console.log('Mounted', props.node.id);
+    observer.value = new ResizeObserver(updateDimensions);
+    observer.value.observe(nodeElement.value);
+
+    localData.value.currentX = props.node.x;
+    localData.value.currentY = props.node.y;
+    localData.value.currentHeight = props.node.h ? props.node.h : nodeElement.value.clientHeight;
+
+    if (props.node.parent) {
+        parent.value = store.value.nodes[props.node.parent];
+        observeParent();
+        updateDimensionsFromParent();
+    }
+});
+
+onBeforeUnmount(() => {
+    console.log('[Node][beforeUnmount] Unmounting', props.node.id);
+    cleanup();
+});
+
+onDeactivated(() => {
+    console.log('[Node][deactivated] Deactivated', props.node.id);
+    cleanup();
+});
+
+watch(() => localData.value.currentX, () => {
+    x.value = localData.value.currentX;
+});
+
+watch(() => localData.value.currentY, () => {
+    y.value = localData.value.currentY;
+});
+
+watch(() => localData.value.currentWidth, () => {
+    w.value = localData.value.currentWidth;
+});
+
+watch(() => props.node.x, () => {
+    localData.value.currentX = props.node.x;
+});
+
+watch(() => props.node.y, () => {
+    localData.value.currentY = props.node.y;
+});
+
+watch(() => props.node.w, () => {
+    localData.value.currentWidth = props.node.w;
+});
+
+watch(() => props.node.parent, () => {
+    if (props.node.parent) {
+        parent.value = store.value.nodes[props.node.parent];
+        observeParent();
+        updateDimensionsFromParent();
+    } else {
+        parent.value = null;
+        cleanupParentWatchers();
+        parentLocalData.value = null;
+    }
+});
+
 </script>
 
 <style>

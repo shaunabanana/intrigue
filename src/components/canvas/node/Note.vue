@@ -4,8 +4,10 @@
     </div>
 </template>
 
-<script>
-import { defineComponent } from 'vue';
+<script setup>
+import {
+    inject, onBeforeUnmount, onMounted, ref, watch,
+} from 'vue';
 import { Editor, EditorContent } from '@tiptap/vue-3';
 import StarterKit from '@tiptap/starter-kit';
 import Highlight from '@tiptap/extension-highlight';
@@ -13,79 +15,73 @@ import Link from '@tiptap/extension-link';
 import Strike from '@tiptap/extension-strike';
 import Underline from '@tiptap/extension-underline';
 
-export default defineComponent({
-    name: 'IntrigueNote',
-    inject: ['document', 'store', 'state', 'send'],
-    components: {
-        EditorContent,
-    },
-    props: {
-        id: String,
-        content: String,
-        editing: Boolean,
-    },
+const props = defineProps({
+    id: String,
+    content: String,
+    editing: Boolean,
+});
 
-    data() {
-        return {
-            editor: null,
-        };
-    },
+const emit = defineEmits(['change']);
 
-    mounted() {
-        this.editor = new Editor({
-            content: this.content,
-            extensions: [
-                StarterKit,
-                Highlight,
-                Strike,
-                Underline,
-                Link.configure({
-                    protocols: ['zotero'],
-                }),
-            ],
-            autofocus: this.editing,
-            editable: this.editing,
+const intrigueDocument = inject('document');
+const send = inject('send');
+
+const editor = ref(null);
+
+function onEditorBlur() {
+    send('editor blur');
+    if (editor.value.getHTML() === '<p></p>') {
+        intrigueDocument.deleteNode(props.id);
+    } else {
+        intrigueDocument.commit('updateNode', {
+            id: props.id,
+            set: {
+                content: editor.value.getHTML(),
+            },
         });
+        emit('change', editor.value.getText());
+    }
+}
 
-        this.editor.on('blur', this.onEditorBlur);
-    },
+onMounted(() => {
+    editor.value = new Editor({
+        content: props.content,
+        extensions: [
+            StarterKit,
+            Highlight,
+            Strike,
+            Underline,
+            Link.configure({
+                protocols: ['zotero'],
+            }),
+        ],
+        autofocus: props.editing,
+        editable: props.editing,
+    });
 
-    beforeUnmount() {
-        this.editor.destroy();
-    },
+    editor.value.on('blur', onEditorBlur);
+});
 
-    methods: {
-        onEditorBlur() {
-            this.send('editor blur');
-            if (this.editor.getHTML() === '<p></p>') {
-                this.document.deleteNode(this.id);
-            } else {
-                this.document.commit('updateNode', {
-                    id: this.id,
-                    set: {
-                        content: this.editor.getHTML(),
-                    },
-                });
-                this.$emit('change', this.editor.getText());
-            }
-        },
-    },
+onBeforeUnmount(() => {
+    if (editor.value) {
+        editor.value.destroy();
+    }
+});
 
-    watch: {
-        content() {
-            this.editor.commands.setContent(this.content);
-        },
+watch(() => props.content, () => {
+    if (!editor.value) return;
+    editor.value.commands.setContent(props.content);
+});
 
-        editing() {
-            this.editor.setEditable(this.editing);
-            if (this.editing) {
-                console.log(`[Note][watch@editing] Editing: ${this.editing}, ${this.id}`);
-                this.editor.commands.focus('end');
-            } else {
-                this.editor.commands.blur();
-            }
-        },
-    },
+watch(() => props.editing, () => {
+    if (!editor.value) return;
+    editor.value.setEditable(props.editing);
+    if (props.editing) {
+        console.log(`[Note][watch@editing] Editing: ${props.editing}, ${props.id}`);
+        editor.value.commands.focus('end');
+    } else {
+        editor.value.commands.blur();
+    }
 });
 </script>
 

@@ -2,19 +2,12 @@
     <slot v-if="shouldRender" />
 </template>
 
-<script>
+<script setup>
 import { nextTick, ref } from 'vue';
 
-export default {
-    name: 'LazyComponent',
+const shouldRender = ref(false);
 
-    setup() {
-        const shouldRender = ref(false);
-        nextTick(() => {
-            shouldRender = true;
-        });
-
-        return { shouldRender };
-    },
-};
+nextTick(() => {
+    shouldRender.value = true;
+});
 </script>

@@ -38,12 +38,12 @@
                     :selected="selection.some((t) => t.id === node.id)"
                     @click="tryLinking(node.id)"
                     @dblclick.stop="doubleClickNode(node)"
-                    @update-dimensions="$refs.moveable.updateRect"
+                    @update-dimensions="updateMoveableRect"
                 />
 
-                <div v-for="user in document.users" :key="user.id">
+                <div v-for="user in intrigueDocument.users" :key="user.id">
                     <Cursor
-                        v-if="document.localUser.id !== user.id"
+                        v-if="intrigueDocument.localUser.id !== user.id"
                         :id="user.id"
                         :name="user.name"
                         :x="user.cursorX"
@@ -80,7 +80,7 @@
             :selectByClick="true"
             :selectFromInside="false"
             :toggleContinueSelect="['shift']"
-            :keyContainer="window"
+            :keyContainer="windowObject"
             :hitRate="0"
             :ratio="0"
             :dragCondition="() => !isPanning"
@@ -94,8 +94,10 @@
     </div>
 </template>
 
-<script>
-import { defineComponent, computed } from 'vue';
+<script setup>
+import {
+    computed, inject, onBeforeUnmount, onMounted, provide, ref,
+} from 'vue';
 
 import { VueInfiniteViewer } from 'vue3-infinite-viewer';
 import Moveable from 'vue3-moveable';
@@ -110,426 +112,414 @@ import IntrigueNode from '@/components/canvas/Node.vue';
 import IntrigueLink from '@/components/canvas/Link.vue';
 import Cursor from '@/components/canvas/Cursor.vue';
 
-export default defineComponent({
-    name: 'IntrigueCanvas',
-    inject: ['document', 'store', 'state', 'send', 'editing', 'dragging', 'dropping', 'detaching', 'linking', 'panning'],
-    components: {
-        VueInfiniteViewer,
-        Moveable,
-        VueSelecto,
-        IntrigueNode,
-        IntrigueLink,
-        Cursor,
-    },
+const intrigueDocument = inject('document');
+const store = inject('store');
+const send = inject('send');
+const editing = inject('editing');
+const dragging = inject('dragging');
+const dropping = inject('dropping');
+const detaching = inject('detaching');
+const linking = inject('linking');
+const panning = inject('panning');
 
-    provide() {
-        return {
-            x: computed(() => this.x),
-            y: computed(() => this.y),
-            zoom: computed(() => this.zoom),
-        };
-    },
+const windowObject = window;
+const canvas = ref(null);
+const moveable = ref(null);
+const selecto = ref(null);
+const x = ref(0);
+const y = ref(0);
+const zoom = ref(1);
+const selection = ref([]);
+const keyboard = new Keyboard();
+const elementSnapDirections = {
+    top: true, left: true, bottom: true, right: true,
+};
 
-    data() {
-        return {
-            x: 0,
-            y: 0,
-            zoom: 1,
-            selection: [],
-            keyboard: new Keyboard(),
-            elementSnapDirections: {
-                top: true, left: true, bottom: true, right: true,
-            },
-        };
-    },
+provide('x', computed(() => x.value));
+provide('y', computed(() => y.value));
+provide('zoom', computed(() => zoom.value));
 
-    methods: {
-        // Data editing methods
+const activeNodeHeight = computed(() => {
+    if (selection.value.length > 0) {
+        const node = store.value.nodes[selection.value[0].id];
+        if (!node) return 0;
+        if (!node.currentHeight) return selection.value[0].clientHeight;
+        if (node.currentHeight <= 20) {
+            return node.currentHeight - 8;
+        }
+        return node.currentHeight - 12;
+    }
+    return 0;
+});
 
-        newNode(event) {
-            const mapped = this.mapMousePosition(event.clientX, event.clientY);
-            const nodeId = nanoid();
-            this.document.commit('createNode', {
-                id: nodeId,
-                type: NodeTypes.Note,
-                content: '',
-                x: mapped.x - 14,
-                y: mapped.y - 10,
-                w: 200,
-                h: 15,
-            });
-            this.send({
-                type: 'create node',
-                node: nodeId,
-            });
-            // if (Object.keys(this.store.nodes).length === 2) {
-            //     const [source, target] = Object.keys(this.store.nodes);
-            //     this.document.commit('createLink', { source, target });
-            //     // arrowLine(`[id="${nodeIds[0]}"]`, `[id="${nodeIds[1]}"]`);
-            // }
-        },
+const shouldResize = computed(() => {
+    if (selection.value.length !== 1) return false;
+    if (!store.value.nodes[selection.value[0].id]) return false;
+    if (store.value.nodes[selection.value[0].id].parent) return false;
+    return true;
+});
 
-        doubleClickNode(node) {
-            this.send({
-                type: 'dblclick node',
-                node: node.id,
-            });
-            // console.log(this.state, this.editing);
-        },
+const isPanning = computed(() => panning.value);
+const snappableElements = computed(() => {
+    console.log(document.querySelectorAll('.node'));
+    return ['.node'];
+    // return document.querySelectorAll('.node') || [];
+});
 
-        deleteNodes(event) {
-            if (this.editing) return;
-            const selectedIds = this.selection.map((el) => el.id);
-            console.log(`[Canvas][deleteNodes] ${selectedIds}`);
-            this.selection = [];
-            this.send('delete node');
-            this.document.commit('deleteNodes', selectedIds);
-            // console.log(selectedIds);
-            event.preventDefault();
-        },
+// Data editing methods
+function newNode(event) {
+    // eslint-disable-next-line no-use-before-define
+    const mapped = mapMousePosition(event.clientX, event.clientY);
+    const nodeId = nanoid();
+    intrigueDocument.commit('createNode', {
+        id: nodeId,
+        type: NodeTypes.Note,
+        content: '',
+        x: mapped.x - 14,
+        y: mapped.y - 10,
+        w: 200,
+        h: 15,
+    });
+    send({
+        type: 'create node',
+        node: nodeId,
+    });
+    // if (Object.keys(store.value.nodes).length === 2) {
+    //     const [source, target] = Object.keys(store.value.nodes);
+    //     intrigueDocument.commit('createLink', { source, target });
+    //     // arrowLine(`[id="${nodeIds[0]}"]`, `[id="${nodeIds[1]}"]`);
+    // }
+}
 
-        undo(event) {
-            if (this.editing === null) {
-                this.document.undo();
-                event.preventDefault();
-            }
-        },
+function doubleClickNode(node) {
+    send({
+        type: 'dblclick node',
+        node: node.id,
+    });
+    // console.log(state, editing.value);
+}
 
-        redo(event) {
-            if (this.editing === null) {
-                this.document.redo();
-                event.preventDefault();
-            }
-        },
+function deleteNodes(event) {
+    if (editing.value) return;
+    const selectedIds = selection.value.map((el) => el.id);
+    console.log(`[Canvas][deleteNodes] ${selectedIds}`);
+    selection.value = [];
+    send('delete node');
+    intrigueDocument.commit('deleteNodes', selectedIds);
+    // console.log(selectedIds);
+    event.preventDefault();
+}
 
-        // Node wrangling methods (dragging, resizing, selecting, etc)
-        panCanvas(event) {
-            this.x = event.scrollLeft;
-            this.y = event.scrollTop;
-            this.document.updateAwareness('x', this.x);
-            this.document.updateAwareness('y', this.y);
-        },
+function undo(event) {
+    if (editing.value === null) {
+        intrigueDocument.undo();
+        event.preventDefault();
+    }
+}
 
-        zoomCanvas(event) {
-            this.zoom = event.zoom;
-            this.$refs.canvas.setZoom(event.zoom);
-        },
+function redo(event) {
+    if (editing.value === null) {
+        intrigueDocument.redo();
+        event.preventDefault();
+    }
+}
 
-        cancelSelectionWhenClickEmpty(e) {
-            this.$refs.selecto.clickTarget(e.inputEvent, e.inputTarget);
-        },
+// Node wrangling methods (dragging, resizing, selecting, etc)
+function panCanvas(event) {
+    x.value = event.scrollLeft;
+    y.value = event.scrollTop;
+    intrigueDocument.updateAwareness('x', x.value);
+    intrigueDocument.updateAwareness('y', y.value);
+}
 
-        sendDragStartMessage(event) {
-            if (!event.events && event.target) {
-                this.send({
-                    type: 'start dragging',
-                    node: event.target.id,
-                });
-            } else if (event.targets) {
-                event.target.classList.add('clickthrough');
-                // console.log(event.target);
-                event.targets.some((target) => {
-                    const rect = target.getBoundingClientRect();
-                    if (
-                        rect.left <= event.clientX
-                        && rect.right >= event.clientX
-                        && rect.top <= event.clientY
-                        && rect.bottom >= event.clientY
-                    ) {
-                        this.send({
-                            type: 'start dragging',
-                            node: target.id,
-                        });
-                        return false;
-                    }
-                    return true;
-                });
-            }
-        },
+function zoomCanvas(event) {
+    zoom.value = event.zoom;
+    canvas.value.setZoom(event.zoom);
+}
 
-        dragNodes(event) {
-            this.sendDragStartMessage(event);
+function cancelSelectionWhenClickEmpty(e) {
+    selecto.value.clickTarget(e.inputEvent, e.inputTarget);
+}
 
-            let events;
-            if (!event.events && event.target) {
-                // Dragging only one node
-                events = [event];
-            } else if (event.events) {
-                // Dragging multiple nodes
-                events = event.events;
-            }
-
-            // See if any nodes in the current selection will be detached from parent if moved.
-            const nodes = events.map((e) => this.store.nodes[e.target.id]);
-            const nodeIds = events.map((e) => e.target.id);
-            const toDetach = [];
-            nodes.forEach((node) => {
-                if (node.parent && !nodeIds.includes(node.parent)) {
-                    toDetach.push({
-                        source: node.parent,
-                        target: node.id,
-                    });
-                }
-            });
-            if (toDetach.length > 0) {
-                this.send({ type: 'start detaching', detaching: toDetach });
-                const distance = Math.sqrt(
-                    event.dist[0] * event.dist[0] + event.dist[1] * event.dist[1],
-                );
-                // console.log(distance);
-
-                if (distance > 30) {
-                    // Detach these nodes
-                    this.send('detached');
-                    toDetach.forEach((pair) => {
-                        this.document.commit('unsnapNode', pair);
-                    });
-                } else {
-                    return;
-                }
-            }
-
-            // We don't commit here because we don't want to
-            // leave undo history for rapid-firing events.
-            events.forEach((e) => {
-                const node = this.store.nodes[e.target.id];
-                if (node.parent) return;
-                if (!this.document.localData.nodes[e.target.id]) {
-                    this.document.localData.nodes[e.target.id] = {};
-                }
-                // eslint-disable-next-line prefer-destructuring
-                this.document.localData.nodes[e.target.id].currentX = e.translate[0];
-                // eslint-disable-next-line prefer-destructuring
-                this.document.localData.nodes[e.target.id].currentY = e.translate[1];
-            });
-        },
-
-        commitNodePositions(event) {
-            // If dropping has value, then handle that first.
-            // Note that in this case, the action to be commited is snapNode,
-            // not updateNodes
-            if (this.dropping) {
-                console.log('[Canvas][commitNodePositions] Dropping', this.dragging, 'on', this.dropping);
-                this.document.commit('snapNode', {
-                    source: this.dropping,
-                    target: this.dragging,
-                });
-                this.send('stop dragging');
-            }
-
-            // If we're detaching half-way, then don't commit any position update and just return.
-            if (this.detaching.length > 0) {
-                console.log('[Canvas][commitNodePositions] Detaching ended halfway.');
-                this.send('stop detaching');
-                return;
-            }
-
-            // If event.lastEvent exists, then it means that the node moved a little.
-            // Basically, not an "in-place click".
-            if (event.lastEvent) {
-                if (event.lastEvent.target) {
-                    event.lastEvent.target.classList.remove('clickthrough');
-                }
-                // Only update the parents, and the descendants will follow.
-                const parents = [];
-                this.selection.forEach((e) => {
-                    const node = this.store.nodes[e.id];
-                    if (!node.parent) parents.push(e.id);
-                });
-                this.document.commit('updateNodes', {
-                    id: parents,
-                    by: {
-                        x: event.lastEvent.dist[0],
-                        y: event.lastEvent.dist[1],
-                    },
-                });
-            }
-            this.send('stop dragging');
-        },
-
-        preventSelectionWhenDragging(e) {
-            const { target } = e.inputEvent;
-            if (
-                this.$refs.moveable.isMoveableElement(target)
-                || this.selection.some((t) => t === target || t.contains(target))
-                // || target.matches('.moveable-area')
-                // || target.matches('.moveable-control')
-            ) {
-                e.stop();
-            }
-        },
-
-        tryLinking(nodeId) {
-            if (this.linking) {
-                if (nodeId !== this.linking) {
-                    console.log(`[Canvas][selectNode] Linking ${this.linking} to ${nodeId}`);
-
-                    const linkId = this.document.findLinkByNodeIds(
-                        this.linking,
-                        nodeId,
-                    );
-                    if (linkId) {
-                        this.document.commit('removeLink', linkId);
-                    } else {
-                        this.document.commit('createLink', {
-                            source: this.linking,
-                            target: nodeId,
-                        });
-                    }
-                }
-            }
-        },
-
-        selectNode(e) {
-            if (this.linking && e.selected.length > 0) return;
-            this.send({
-                type: 'update selection',
-                selection: e.selected.map((el) => el.id),
-            });
-        },
-
-        commitSelections(e) {
-            if (e.isDragStart) {
-                e.inputEvent.preventDefault();
-                setTimeout(() => {
-                    this.$refs.moveable.dragStart(e.inputEvent);
-                });
-            }
-            this.selection = e.selected;
-            const selectedIds = e.selected.map((el) => el.id);
-            this.document.updateAwareness('selection', selectedIds);
-            this.send({
-                type: 'done selecting',
-                selection: selectedIds,
-            });
-        },
-
-        resizeNode(event) {
-            // We still need to change the width here, otherwise the resizing is very unresponsive.
-            // TODO: See if we can get around this.
-            const { target } = event;
-            target.style.width = `${event.width}px`;
-            this.document.updateNode({
-                id: event.target.id,
-                set: {
-                    currentWidth: event.width,
-                },
-            });
-        },
-
-        commitNodeSize(event) {
-            if (!event.lastEvent) return;
-            this.document.commit('updateNode', {
-                id: event.target.id,
-                set: {
-                    w: event.lastEvent.width,
-                    h: event.target.offsetHeight,
-                },
-            });
-        },
-
-        // Utility functions
-        mapMousePosition(x, y) {
-            const mappedX = x / this.zoom + this.x;
-            const mappedY = y / this.zoom + this.y;
-            return { x: mappedX, y: mappedY };
-        },
-
-        gatherDescendants(root, includeRoot) {
-            const descendants = includeRoot ? new Set([root.id]) : new Set();
-            root.children.forEach((childId) => {
-                const child = this.store.nodes[childId];
-                const childDescendants = this.gatherDescendants(child, true);
-                childDescendants.forEach((descendantId) => {
-                    descendants.add(descendantId);
-                });
-            });
-            return [...descendants];
-        },
-
-        // Event handlers
-        updateCursorPosition(event) {
-            const mapped = this.mapMousePosition(event.clientX, event.clientY);
-            this.document.updateAwareness('cursorX', mapped.x);
-            this.document.updateAwareness('cursorY', mapped.y);
-        },
-
-        startPanning(event) {
-            if (!this.editing) {
-                // console.log('[Canvas][startPanning] Space pressed.', event);
-                this.send('space pressed');
-                event.preventDefault();
-                event.stopPropagation();
-            }
-        },
-
-        stopPanning(event) {
-            if (!this.editing) {
-                // console.log('[Canvas][startPanning] Space released.', event);
-                this.send('space released');
-                event.preventDefault();
-                event.stopPropagation();
-            }
-        },
-    },
-
-    computed: {
-        activeNodeHeight() {
-            if (this.selection.length > 0) {
-                const node = this.store.nodes[this.selection[0].id];
-                if (!node) return 0;
-                if (!node.currentHeight) return this.selection[0].clientHeight;
-                if (node.currentHeight <= 20) {
-                    return node.currentHeight - 8;
-                }
-                return node.currentHeight - 12;
-            }
-            return 0;
-        },
-
-        shouldResize() {
-            if (this.selection.length !== 1) return false;
-            if (!this.store.nodes[this.selection[0].id]) return false;
-            if (this.store.nodes[this.selection[0].id].parent) return false;
-            return true;
-        },
-
-        isPanning() {
-            return this.panning;
-        },
-
-        isNotPanning() {
-            return !this.panning;
-        },
-
-        snappableElements() {
-            console.log(document.querySelectorAll('.node'));
-            return ['.node'];
-            // return document.querySelectorAll('.node') || [];
-        },
-    },
-
-    mounted() {
-        // Create handler to update cursor position to remote users.
-        // Don't forget to unregister upon leaving this page!
-        window.addEventListener('mousemove', this.updateCursorPosition);
-        // Register keyboard shortcuts. Need to unregister as well.
-        this.keyboard.on('keydown', 'Space', this.startPanning);
-        this.keyboard.on('keyup', 'Space', this.stopPanning);
-        this.keyboard.on('keydown', 'Backspace', this.deleteNodes);
-        this.keyboard.on('keydown', '$mod+Z', this.undo);
-        this.keyboard.on('keydown', '$mod+Shift+Z', this.redo);
-
-        this.document.on('synced', () => {
-            // Clear selections.
-            this.document.updateAwareness('selection', []);
+function sendDragStartMessage(event) {
+    if (!event.events && event.target) {
+        send({
+            type: 'start dragging',
+            node: event.target.id,
         });
-    },
+    } else if (event.targets) {
+        event.target.classList.add('clickthrough');
+        // console.log(event.target);
+        event.targets.some((target) => {
+            const rect = target.getBoundingClientRect();
+            if (
+                rect.left <= event.clientX
+                && rect.right >= event.clientX
+                && rect.top <= event.clientY
+                && rect.bottom >= event.clientY
+            ) {
+                send({
+                    type: 'start dragging',
+                    node: target.id,
+                });
+                return false;
+            }
+            return true;
+        });
+    }
+}
 
-    beforeUnmount() {
-        window.removeEventListener('mousemove', this.updateCursorPosition);
-        this.keyboard.removeListeners();
-    },
+function dragNodes(event) {
+    sendDragStartMessage(event);
+
+    let events;
+    if (!event.events && event.target) {
+        // Dragging only one node
+        events = [event];
+    } else if (event.events) {
+        // Dragging multiple nodes
+        events = event.events;
+    }
+    if (!events) return;
+
+    // See if any nodes in the current selection will be detached from parent if moved.
+    const nodes = events.map((e) => store.value.nodes[e.target.id]);
+    const nodeIds = events.map((e) => e.target.id);
+    const toDetach = [];
+    nodes.forEach((node) => {
+        if (node.parent && !nodeIds.includes(node.parent)) {
+            toDetach.push({
+                source: node.parent,
+                target: node.id,
+            });
+        }
+    });
+    if (toDetach.length > 0) {
+        send({ type: 'start detaching', detaching: toDetach });
+        const distance = Math.sqrt(
+            event.dist[0] * event.dist[0] + event.dist[1] * event.dist[1],
+        );
+        // console.log(distance);
+
+        if (distance > 30) {
+            // Detach these nodes
+            send('detached');
+            toDetach.forEach((pair) => {
+                intrigueDocument.commit('unsnapNode', pair);
+            });
+        } else {
+            return;
+        }
+    }
+
+    // We don't commit here because we don't want to
+    // leave undo history for rapid-firing events.
+    events.forEach((e) => {
+        const node = store.value.nodes[e.target.id];
+        if (node.parent) return;
+        if (!intrigueDocument.localData.nodes[e.target.id]) {
+            intrigueDocument.localData.nodes[e.target.id] = {};
+        }
+        // eslint-disable-next-line prefer-destructuring
+        intrigueDocument.localData.nodes[e.target.id].currentX = e.translate[0];
+        // eslint-disable-next-line prefer-destructuring
+        intrigueDocument.localData.nodes[e.target.id].currentY = e.translate[1];
+    });
+}
+
+function commitNodePositions(event) {
+    // If dropping has value, then handle that first.
+    // Note that in this case, the action to be commited is snapNode,
+    // not updateNodes
+    if (dropping.value) {
+        console.log('[Canvas][commitNodePositions] Dropping', dragging.value, 'on', dropping.value);
+        intrigueDocument.commit('snapNode', {
+            source: dropping.value,
+            target: dragging.value,
+        });
+        send('stop dragging');
+    }
+
+    // If we're detaching half-way, then don't commit any position update and just return.
+    if (detaching.value.length > 0) {
+        console.log('[Canvas][commitNodePositions] Detaching ended halfway.');
+        send('stop detaching');
+        return;
+    }
+
+    // If event.lastEvent exists, then it means that the node moved a little.
+    // Basically, not an "in-place click".
+    if (event.lastEvent) {
+        if (event.lastEvent.target) {
+            event.lastEvent.target.classList.remove('clickthrough');
+        }
+        // Only update the parents, and the descendants will follow.
+        const parents = [];
+        selection.value.forEach((e) => {
+            const node = store.value.nodes[e.id];
+            if (!node.parent) parents.push(e.id);
+        });
+        intrigueDocument.commit('updateNodes', {
+            id: parents,
+            by: {
+                x: event.lastEvent.dist[0],
+                y: event.lastEvent.dist[1],
+            },
+        });
+    }
+    send('stop dragging');
+}
+
+function preventSelectionWhenDragging(e) {
+    const { target } = e.inputEvent;
+    if (
+        moveable.value.isMoveableElement(target)
+        || selection.value.some((t) => t === target || t.contains(target))
+        // || target.matches('.moveable-area')
+        // || target.matches('.moveable-control')
+    ) {
+        e.stop();
+    }
+}
+
+function tryLinking(nodeId) {
+    if (linking.value) {
+        if (nodeId !== linking.value) {
+            console.log(`[Canvas][selectNode] Linking ${linking.value} to ${nodeId}`);
+
+            const linkId = intrigueDocument.findLinkByNodeIds(
+                linking.value,
+                nodeId,
+            );
+            if (linkId) {
+                intrigueDocument.commit('removeLink', linkId);
+            } else {
+                intrigueDocument.commit('createLink', {
+                    source: linking.value,
+                    target: nodeId,
+                });
+            }
+        }
+    }
+}
+
+function selectNode(e) {
+    if (linking.value && e.selected.length > 0) return;
+    send({
+        type: 'update selection',
+        selection: e.selected.map((el) => el.id),
+    });
+}
+
+function commitSelections(e) {
+    if (e.isDragStart) {
+        e.inputEvent.preventDefault();
+        setTimeout(() => {
+            moveable.value.dragStart(e.inputEvent);
+        });
+    }
+    selection.value = e.selected;
+    const selectedIds = e.selected.map((el) => el.id);
+    intrigueDocument.updateAwareness('selection', selectedIds);
+    send({
+        type: 'done selecting',
+        selection: selectedIds,
+    });
+}
+
+function resizeNode(event) {
+    // We still need to change the width here, otherwise the resizing is very unresponsive.
+    // TODO: See if we can get around this.
+    const { target } = event;
+    target.style.width = `${event.width}px`;
+    intrigueDocument.updateNode({
+        id: event.target.id,
+        set: {
+            currentWidth: event.width,
+        },
+    });
+}
+
+function commitNodeSize(event) {
+    if (!event.lastEvent) return;
+    intrigueDocument.commit('updateNode', {
+        id: event.target.id,
+        set: {
+            w: event.lastEvent.width,
+            h: event.target.offsetHeight,
+        },
+    });
+}
+
+function updateMoveableRect() {
+    if (moveable.value) moveable.value.updateRect();
+}
+
+// Utility functions
+function mapMousePosition(mouseX, mouseY) {
+    const mappedX = mouseX / zoom.value + x.value;
+    const mappedY = mouseY / zoom.value + y.value;
+    return { x: mappedX, y: mappedY };
+}
+
+// eslint-disable-next-line no-unused-vars
+function gatherDescendants(root, includeRoot) {
+    const descendants = includeRoot ? new Set([root.id]) : new Set();
+    root.children.forEach((childId) => {
+        const child = store.value.nodes[childId];
+        const childDescendants = gatherDescendants(child, true);
+        childDescendants.forEach((descendantId) => {
+            descendants.add(descendantId);
+        });
+    });
+    return [...descendants];
+}
+
+// Event handlers
+function updateCursorPosition(event) {
+    const mapped = mapMousePosition(event.clientX, event.clientY);
+    intrigueDocument.updateAwareness('cursorX', mapped.x);
+    intrigueDocument.updateAwareness('cursorY', mapped.y);
+}
+
+function startPanning(event) {
+    if (!editing.value) {
+        // console.log('[Canvas][startPanning] Space pressed.', event);
+        send('space pressed');
+        event.preventDefault();
+        event.stopPropagation();
+    }
+}
+
+function stopPanning(event) {
+    if (!editing.value) {
+        // console.log('[Canvas][startPanning] Space released.', event);
+        send('space released');
+        event.preventDefault();
+        event.stopPropagation();
+    }
+}
+
+onMounted(() => {
+    // Create handler to update cursor position to remote users.
+    // Don't forget to unregister upon leaving this page!
+    window.addEventListener('mousemove', updateCursorPosition);
+    // Register keyboard shortcuts. Need to unregister as well.
+    keyboard.on('keydown', 'Space', startPanning);
+    keyboard.on('keyup', 'Space', stopPanning);
+    keyboard.on('keydown', 'Backspace', deleteNodes);
+    keyboard.on('keydown', '$mod+Z', undo);
+    keyboard.on('keydown', '$mod+Shift+Z', redo);
+
+    intrigueDocument.on('synced', () => {
+        // Clear selections.
+        intrigueDocument.updateAwareness('selection', []);
+    });
+});
+
+onBeforeUnmount(() => {
+    window.removeEventListener('mousemove', updateCursorPosition);
+    keyboard.removeListeners();
 });
 </script>
 

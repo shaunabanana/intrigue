@@ -12,38 +12,35 @@
     </a-button>
 </template>
 
-<script>
+<script setup>
+import { onBeforeUnmount, ref } from 'vue';
+import { Message } from '@arco-design/web-vue';
 import ultralightCopy from 'copy-to-clipboard-ultralight';
 
-export default {
-    name: 'CopyButton',
-    props: {
-        size: String,
-        shape: String,
-        type: String,
-        status: String,
-        text: String,
-    },
+const props = defineProps({
+    size: String,
+    shape: String,
+    type: String,
+    status: String,
+    text: String,
+});
 
-    data() {
-        return {
-            copied: false,
-            timer: null,
-        };
-    },
+const copied = ref(false);
+let timer = null;
 
-    methods: {
-        copy() {
-            if (ultralightCopy(this.text)) {
-                this.copied = true;
-                if (this.timer) clearTimeout(this.timer);
-                this.timer = setTimeout(() => {
-                    this.copied = false;
-                }, 1000);
-            } else {
-                this.$message.error('Error copying to clipboard!');
-            }
-        },
-    },
-};
+function copy() {
+    if (ultralightCopy(props.text)) {
+        copied.value = true;
+        if (timer) clearTimeout(timer);
+        timer = setTimeout(() => {
+            copied.value = false;
+        }, 1000);
+    } else {
+        Message.error('Error copying to clipboard!');
+    }
+}
+
+onBeforeUnmount(() => {
+    if (timer) clearTimeout(timer);
+});
 </script>
