@@ -19,7 +19,7 @@ export default defineComponent({
         id: String,
         type: String,
         title: String,
-        author: String,
+        author: Array,
         identifier: String,
     },
 
