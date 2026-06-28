@@ -10,6 +10,8 @@ import { Editor, EditorContent } from '@tiptap/vue-3';
 import StarterKit from '@tiptap/starter-kit';
 import Highlight from '@tiptap/extension-highlight';
 import Link from '@tiptap/extension-link';
+import Strike from '@tiptap/extension-strike';
+import Underline from '@tiptap/extension-underline';
 
 export default defineComponent({
     name: 'IntrigueNote',
@@ -35,6 +37,8 @@ export default defineComponent({
             extensions: [
                 StarterKit,
                 Highlight,
+                Strike,
+                Underline,
                 Link.configure({
                     protocols: ['zotero'],
                 }),
