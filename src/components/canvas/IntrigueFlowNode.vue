@@ -258,6 +258,7 @@ const classes = computed(() => ({
     selected: props.selected,
     dropping: dropping.value === props.id,
     noselect: editing.value !== props.id,
+    editing: editing.value === props.id,
     clickthrough: isDraggingSelected.value,
     selectable: !selectedByRemoteUsers.value,
     'remote-selected': selectedByRemoteUsers.value,
@@ -409,11 +410,11 @@ watch(() => node.value.w, () => {
     --node-corner: 0.7rem;
     position: relative;
     min-height: 20px;
-    padding: 0.28rem 1.15rem 0.28rem 0.55rem;
+    padding: 0.1rem 1.15rem 0.1rem 0.55rem;
     margin: -1px;
     border-radius: var(--node-corner);
     font-size: 14px;
-    line-height: 1.2;
+    line-height: 1.15;
     word-wrap: break-word;
     cursor: pointer;
 }
@@ -542,6 +543,10 @@ watch(() => node.value.w, () => {
     -moz-user-select: none;
     -ms-user-select: none;
     user-select: none;
+}
+
+.intrigue-flow-node.editing {
+    cursor: text !important;
 }
 
 .intrigue-flow-node .content {
