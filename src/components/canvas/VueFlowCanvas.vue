@@ -13,7 +13,8 @@
             :selection-key-code="null"
             :pan-on-drag="panning ? [0] : [1, 2]"
             :select-nodes-on-drag="!panning"
-            :zoom-on-scroll="true"
+            :pan-on-scroll="true"
+            :zoom-activation-key-code="'Meta'"
             :zoom-on-double-click="false"
             @dblclick="onCanvasDoubleClick"
             @pane-click="onPaneClick"
@@ -395,7 +396,7 @@ const contextualHelp = computed(() => {
 
     if (!hasSelection.value) {
         return [
-            { id: 'pan', shortcut: 'Space', text: 'to pan' },
+            { id: 'pan', shortcut: 'Meta', text: 'to zoom' },
             { id: 'select', shortcut: 'Shift', text: 'to multi-select' },
             { id: 'create', shortcut: 'Double-click', text: 'to create/edit a node' },
         ];
