@@ -1,16 +1,11 @@
 /* eslint-disable import/no-extraneous-dependencies */
 import {
-    app, dialog, BrowserWindow, ipcMain, shell,
+    app, dialog, BrowserWindow, shell,
 } from 'electron';
 
 import { windowManager } from './window';
 
 const isMac = process.platform === 'darwin';
-
-ipcMain.on('set-edited', () => {
-    const window = BrowserWindow.getFocusedWindow();
-    if (window) window.setDocumentEdited(true);
-});
 
 export function saveFile(item, window) {
     const targetWindow = window || BrowserWindow.getFocusedWindow();

@@ -1,5 +1,5 @@
-export IntrigueDocument from './document';
-export NodeTypes from './types';
+export { default as IntrigueDocument } from './document';
+export { default as NodeTypes } from './types';
 
 // export const IntrigueDocument = document.IntrigueDocument;
 // export const NodeTypes = document.NodeTypes;

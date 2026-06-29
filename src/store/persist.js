@@ -1,4 +1,3 @@
-import isElectron from 'is-electron';
 import { encodeStateAsUpdate, applyUpdate } from 'yjs';
 // import * as mutex from 'lib0/mutex';
 import EventEmitter from '@/utils/event';
@@ -11,12 +10,10 @@ export default class LocalFilePersistence extends EventEmitter {
         this.timeout = null;
         this.debounce = debounce;
 
-        if (isElectron()) {
-            // eslint-disable-next-line global-require
-            const { readFile, writeFile, access } = require('fs/promises');
-            this.readFile = readFile;
-            this.writeFile = writeFile;
-            this.access = access;
+        if (window.intrigue?.files) {
+            this.readFile = window.intrigue.files.readFile;
+            this.writeFile = window.intrigue.files.writeFile;
+            this.access = window.intrigue.files.access;
         } else if (fs) {
             const { readFile, writeFile, access } = fs;
             this.readFile = readFile;

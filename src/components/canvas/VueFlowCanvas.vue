@@ -461,6 +461,14 @@ function getDragIds(event) {
     return [...new Set(ids)];
 }
 
+function clearLocalDragPositions(ids) {
+    ids.forEach((id) => {
+        const localData = getNodeLocalData(id);
+        delete localData.currentX;
+        delete localData.currentY;
+    });
+}
+
 function onNodeDragStart(event) {
     const ids = getDragIds(event);
     const positions = {};
@@ -538,6 +546,7 @@ function onNodeDragStop(event) {
             source: dropping.value,
             target: dragging.value,
         });
+        clearLocalDragPositions(ids);
         dragStartPositions.value = {};
         send('stop dragging');
         return;
@@ -576,6 +585,7 @@ function onNodeDragStop(event) {
         });
     }
 
+    clearLocalDragPositions(ids);
     dragStartPositions.value = {};
     if (detaching.value.length > 0) send('stop detaching');
     send('stop dragging');

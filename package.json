@@ -1,20 +1,24 @@
 {
   "name": "intrigue",
   "productName": "Intrigue",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "private": true,
   "description": "Organize literature into ideas, fast.",
   "author": "Shengchen Zhang <shengchenzhang1207@gmail.com> [https://shengchen.design/]",
   "scripts": {
-    "serve": "vue-cli-service serve",
-    "build": "vue-cli-service build",
-    "lint": "vue-cli-service lint",
-    "electron:build": "vue-cli-service electron:build",
-    "electron:serve": "vue-cli-service electron:serve",
-    "postinstall": "electron-builder install-app-deps",
+    "serve": "electron-vite dev",
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "lint": "eslint . --ext .js,.vue",
+    "electron:build": "electron-vite build && electron-builder",
+    "electron:serve": "electron-vite dev",
+    "postinstall": "node ./node_modules/electron/install.js && electron-builder install-app-deps",
     "postuninstall": "electron-builder install-app-deps"
   },
-  "main": "background.js",
+  "main": "./out/main/background.js",
+  "engines": {
+    "node": ">=22.12.0"
+  },
   "dependencies": {
     "@arco-design/web-vue": "^2.31.0",
     "@syncedstore/core": "^0.4.1",
@@ -41,7 +45,6 @@
     "is-electron": "^2.2.1",
     "linkifyjs": "^4.0.2",
     "nanoid": "^4.0.0",
-    "node-polyfill-webpack-plugin": "^2.0.1",
     "random-fruits-name": "^1.9.5",
     "tinykeys": "^1.4.0",
     "vue": "^3.2.37",
@@ -55,30 +58,45 @@
   "devDependencies": {
     "@babel/core": "^7.18.5",
     "@babel/eslint-parser": "^7.18.2",
-    "@babel/plugin-proposal-export-default-from": "^7.17.12",
-    "@vue/cli-plugin-babel": "~5.0.6",
-    "@vue/cli-plugin-eslint": "~5.0.6",
-    "@vue/cli-service": "~5.0.6",
+    "@electron/notarize": "^3.1.1",
+    "@vitejs/plugin-vue": "^6.0.7",
     "@vue/eslint-config-airbnb": "^6.0.0",
-    "electron": "^21.1.1",
-    "electron-builder": "^23.1.0",
-    "electron-builder-notarize": "^1.5.0",
+    "electron": "^41.9.0",
+    "electron-builder": "^26.15.3",
     "electron-devtools-installer": "^3.2.0",
+    "electron-vite": "^5.0.0",
     "eslint": "^8.18.0",
+    "eslint-import-resolver-alias": "^1.1.2",
     "eslint-plugin-import": "^2.26.0",
     "eslint-plugin-vue": "^9.1.1",
     "eslint-plugin-vuejs-accessibility": "^1.2.0",
     "sass": "^1.52.3",
-    "sass-loader": "^13.0.0",
-    "skeleton-loader": "^2.0.0",
-    "vue-cli-plugin-electron-builder": "~2.1.1"
+    "vite": "^7.3.6"
   },
-  "resolutions": {
-    "vue-cli-plugin-electron-builder/electron-builder": "^23.1.0"
-  },
-  "overrides": {
-    "vue-cli-plugin-electron-builder": {
-      "electron-builder": "^23.1.0"
-    }
+  "build": {
+    "productName": "Intrigue",
+    "appId": "design.shengchen.intrigue",
+    "directories": {
+      "output": "dist_electron",
+      "buildResources": "build"
+    },
+    "files": [
+      "out/**/*"
+    ],
+    "afterSign": "build/notarize.cjs",
+    "mac": {
+      "hardenedRuntime": true,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.inherit.plist"
+    },
+    "fileAssociations": [
+      {
+        "ext": "intrigue",
+        "name": "Intrigue Literature Map",
+        "description": "Intrigue literature map file.",
+        "role": "Editor",
+        "icon": "document.icns"
+      }
+    ]
   }
 }

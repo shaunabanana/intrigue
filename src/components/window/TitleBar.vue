@@ -5,7 +5,7 @@
             justify="center" align="center"
         >
             <a-col :span="8">
-                <a-button-group style="margin-left: 5rem;">
+                <a-button-group class="window-controls" style="margin-left: 5rem;">
                     <a-button type="text" size="mini"
                         :disabled="!document.canUndo()"
                         @click="document.undo()"
@@ -24,7 +24,7 @@
             <a-col :span="8" align="center">
                 <b>{{fileName}}</b>
             </a-col>
-            <a-col :span="8" align="right" style="padding-right: 0.5rem">
+            <a-col :span="8" align="right" class="window-controls" style="padding-right: 0.5rem">
                 <CopyButton size="mini" :text="shareLink">Share</CopyButton>
             </a-col>
         </a-row>
@@ -68,25 +68,20 @@
 import {
     computed, inject, onMounted, ref,
 } from 'vue';
-import isElectron from 'is-electron';
-import is from 'electron-is';
-import { basename } from 'path';
-// import { is } from 'electron-util';
+import { IconRedo, IconUndo } from '@arco-design/web-vue/es/icon';
 import CopyButton from './CopyButton.vue';
 
 const store = inject('store');
 const document = inject('document');
 const filePath = inject('filePath');
 
-const electron = isElectron();
-const macOS = is.macOS();
+const electron = Boolean(window.intrigue?.isElectron);
 const newFile = ref(false);
 
-const fileName = computed(() => (filePath.value ? basename(filePath.value) : 'Untitled'));
+const fileName = computed(() => (filePath.value ? window.intrigue.basename(filePath.value) : 'Untitled'));
 const shareLink = computed(() => `https://intrigue-app.github.io/?document=${store.value.metadata.id}`);
 
 onMounted(() => {
-    console.log(electron, macOS, is.macOS());
     const queryString = window.location.search;
     const urlParams = new URLSearchParams(queryString);
     newFile.value = !urlParams.get('document');
@@ -112,6 +107,10 @@ onMounted(() => {
 
 .window-drag {
     -webkit-app-region: drag;
+}
+
+.window-controls {
+    -webkit-app-region: no-drag;
 }
 
 .browser {

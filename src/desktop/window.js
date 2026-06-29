@@ -1,10 +1,22 @@
 /* eslint-disable import/no-extraneous-dependencies */
-import { createProtocol } from 'vue-cli-plugin-electron-builder/lib';
 import {
     app, BrowserWindow, shell, dialog,
 } from 'electron';
-import { basename } from 'path';
+import { basename, join } from 'path';
 import is from 'electron-is';
+
+const allowedExternalProtocols = new Set(['http:', 'https:', 'mailto:', 'zotero:']);
+
+function openExternal(url) {
+    try {
+        const parsedUrl = new URL(url);
+        if (allowedExternalProtocols.has(parsedUrl.protocol)) {
+            shell.openExternal(url);
+        }
+    } catch (error) {
+        console.error('[Window][openExternal] Invalid URL.', error);
+    }
+}
 
 function chooseSavePath(window) {
     return dialog.showSaveDialogSync(window, {
@@ -66,16 +78,19 @@ export class EditorWindowManager {
             height: 720,
             titleBarStyle: is.macOS() ? 'hidden' : undefined,
             webPreferences: {
-                nodeIntegration: process.env.ELECTRON_NODE_INTEGRATION,
-                contextIsolation: !process.env.ELECTRON_NODE_INTEGRATION,
-                webSecurity: false, // Allow CORS.
-                // preload: path.join(__dirname, 'preload.js')
+                preload: join(__dirname, '../preload/preload.js'),
+                nodeIntegration: false,
+                contextIsolation: true,
+                sandbox: true,
+                // Existing literature URL metadata fetching depends on cross-origin requests.
+                webSecurity: false,
             },
         });
 
         // Open links in native browser, instead of creating another Electron window.
         window.webContents.setWindowOpenHandler((event) => {
-            shell.openExternal(event.url);
+            openExternal(event.url);
+            return { action: 'deny' };
         });
 
         window.on('maximize', () => {
@@ -129,14 +144,13 @@ export class EditorWindowManager {
             }
         });
 
-        if (process.env.WEBPACK_DEV_SERVER_URL) {
+        if (process.env.ELECTRON_RENDERER_URL) {
             // Load the url of the dev server if in development mode
-            await window.loadURL(process.env.WEBPACK_DEV_SERVER_URL);
+            await window.loadURL(process.env.ELECTRON_RENDERER_URL);
             if (!process.env.IS_TEST) window.webContents.openDevTools();
         } else {
-            createProtocol('app');
             // Load the index.html when not in development
-            window.loadURL('app://./index.html');
+            await window.loadFile(join(__dirname, '../renderer/index.html'));
         }
 
         this.windows.push({

@@ -14,7 +14,7 @@
 
 <script setup>
 import { onBeforeUnmount, ref } from 'vue';
-import { Message } from '@arco-design/web-vue';
+import Message from '@arco-design/web-vue/es/message';
 import ultralightCopy from 'copy-to-clipboard-ultralight';
 
 const props = defineProps({

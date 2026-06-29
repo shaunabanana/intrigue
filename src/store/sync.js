@@ -1,7 +1,6 @@
 import { nanoid } from 'nanoid';
 import * as Vue from 'vue';
 import { reactive } from 'vue';
-import isElectron from 'is-electron';
 import { enableVueBindings, syncedStore, getYjsValue } from '@syncedstore/core';
 
 import { WebrtcProvider } from 'y-webrtc';
@@ -49,7 +48,7 @@ export default class SyncedDocument extends EventEmitter {
     initPersistence(filePath, overwrite) {
         const doc = getYjsValue(this.store);
 
-        this.saveProvider = isElectron()
+        this.saveProvider = window.intrigue?.isElectron
             ? new LocalFilePersistence(filePath, doc, overwrite)
             : new IndexeddbPersistence(filePath || this.store.metadata.id, doc);
 

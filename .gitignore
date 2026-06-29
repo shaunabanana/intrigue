@@ -27,3 +27,4 @@ pnpm-debug.log*
 
 # Custom
 .env
+out

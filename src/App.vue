@@ -8,8 +8,7 @@
 import {
     computed, onBeforeUnmount, onMounted, provide, reactive, ref, watch,
 } from 'vue';
-import { Message } from '@arco-design/web-vue';
-import isElectron from 'is-electron';
+import Message from '@arco-design/web-vue/es/message';
 
 // import Avatar from 'vue-boring-avatars';
 
@@ -36,6 +35,8 @@ const appState = reactive({
 const debug = ref(false);
 const filePath = ref(undefined);
 const { state, send } = useMachine(intrigueMachine);
+const electron = Boolean(window.intrigue?.isElectron);
+const electronListenerCleanup = [];
 
 provide('document', intrigueDocument);
 provide('store', store);
@@ -46,13 +47,6 @@ provide('filePath', computed(() => filePath.value));
 Object.keys(state.value.context).forEach((key) => {
     provide(key, computed(() => state.value.context[key]));
 });
-
-if (isElectron()) {
-    import('electron-log').then((log) => {
-        Object.assign(console, log.functions);
-        log.catchErrors();
-    });
-}
 
 function broadcastUsername() {
     const fruit = getRandomFruitsName('en', { maxWords: 1 });
@@ -66,11 +60,8 @@ function preventSpaceScroll(event) {
 }
 
 function setDocumentEdited(value) {
-    if (!isElectron()) return;
-    // eslint-disable-next-line import/no-extraneous-dependencies, global-require
-    import('electron').then(({ ipcRenderer }) => {
-        ipcRenderer.send('set-edited', value);
-    });
+    if (!electron) return;
+    window.intrigue.setEdited(value);
 }
 
 onMounted(() => {
@@ -99,30 +90,27 @@ onMounted(() => {
     // Prevent space from causing scrolling down behavior.
     window.addEventListener('keydown', preventSpaceScroll);
 
-    if (isElectron()) {
-        // eslint-disable-next-line import/no-extraneous-dependencies, global-require
-        import('electron').then(({ ipcRenderer }) => {
-            ipcRenderer.invoke('get-packaged').then((isPackaged) => {
-                console.log(`[App][ipcRenderer@get-packaged] ${isPackaged}`);
-                debug.value = !isPackaged;
-            });
-
-            ipcRenderer.on('new-file', () => {
-                console.log('[App][ipcRenderer@set-filepath] This is a new empty file.');
-                intrigueDocument.initSync();
-            });
-
-            ipcRenderer.on('set-filepath', (_, newFilePath, overwrite) => {
-                console.log(`[App][ipcRenderer@set-filepath] filePath is ${newFilePath}.`);
-                filePath.value = newFilePath;
-                intrigueDocument.initPersistence(newFilePath, overwrite);
-            });
-
-            ipcRenderer.on('save-file', () => {
-                console.log('[App][ipcRenderer@save-file] Manual save to disk.');
-                intrigueDocument.saveToDisk();
-            });
+    if (electron) {
+        window.intrigue.getPackaged().then((isPackaged) => {
+            console.log(`[App][get-packaged] ${isPackaged}`);
+            debug.value = !isPackaged;
         });
+
+        electronListenerCleanup.push(window.intrigue.onNewFile(() => {
+            console.log('[App][new-file] This is a new empty file.');
+            intrigueDocument.initSync();
+        }));
+
+        electronListenerCleanup.push(window.intrigue.onSetFilePath((newFilePath, overwrite) => {
+            console.log(`[App][set-filepath] filePath is ${newFilePath}.`);
+            filePath.value = newFilePath;
+            intrigueDocument.initPersistence(newFilePath, overwrite);
+        }));
+
+        electronListenerCleanup.push(window.intrigue.onSaveFile(() => {
+            console.log('[App][save-file] Manual save to disk.');
+            intrigueDocument.saveToDisk();
+        }));
     } else {
         const queryString = window.location.search;
         const urlParams = new URLSearchParams(queryString);
@@ -147,6 +135,7 @@ onMounted(() => {
 onBeforeUnmount(() => {
     console.log('[App][beforeUnmount] Closing document...');
     window.removeEventListener('keydown', preventSpaceScroll);
+    electronListenerCleanup.forEach((cleanup) => cleanup());
     intrigueDocument.close();
     console.log('[App][beforeUnmount] Document closed.');
 });
