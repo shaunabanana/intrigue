@@ -10,7 +10,7 @@
             :default-edge-options="defaultEdgeOptions"
             :delete-key-code="null"
             :multi-selection-key-code="'Shift'"
-            :selection-key-code="null"
+            :selection-key-code="'Shift'"
             :pan-on-drag="panning ? [0] : [1, 2]"
             :select-nodes-on-drag="!panning"
             :zoom-on-scroll="true"
