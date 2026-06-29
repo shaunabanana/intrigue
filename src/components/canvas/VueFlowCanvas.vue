@@ -16,6 +16,7 @@
             :pan-on-scroll="true"
             :zoom-activation-key-code="'Meta'"
             :zoom-on-double-click="false"
+            fit-view-on-init
             @dblclick="onCanvasDoubleClick"
             @pane-click="onPaneClick"
             @pane-mouse-move="updateCursorPosition"
@@ -396,7 +397,7 @@ const contextualHelp = computed(() => {
 
     if (!hasSelection.value) {
         return [
-            { id: 'pan', shortcut: 'Meta', text: 'to zoom' },
+            { id: 'pan', shortcut: shortcutLabel(['Meta', '+Scroll']), text: 'to zoom' },
             { id: 'select', shortcut: 'Shift', text: 'to multi-select' },
             { id: 'create', shortcut: 'Double-click', text: 'to create/edit a node' },
         ];
