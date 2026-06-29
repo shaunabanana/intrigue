@@ -55,7 +55,11 @@ export default class SyncedDocument extends EventEmitter {
 
         this.saveProvider.on('synced', () => {
             console.log('[Sync][saveProvider@synced] Save provider synced.', this.store.metadata.id);
+            const migrated = typeof this.migrateLoadedDocument === 'function'
+                ? this.migrateLoadedDocument()
+                : false;
             if (!this.syncInitialized) this.initSync(this.store.metadata.id);
+            if (migrated) this.emit('migrated');
             this.emit('synced');
         });
 

@@ -65,6 +65,14 @@ function preventSpaceScroll(event) {
     }
 }
 
+function setDocumentEdited(value) {
+    if (!isElectron()) return;
+    // eslint-disable-next-line import/no-extraneous-dependencies, global-require
+    import('electron').then(({ ipcRenderer }) => {
+        ipcRenderer.send('set-edited', value);
+    });
+}
+
 onMounted(() => {
     intrigueDocument.on('synced', () => {
         broadcastUsername();
@@ -72,22 +80,16 @@ onMounted(() => {
     });
 
     intrigueDocument.on('commit', () => {
-        if (isElectron()) {
-            // eslint-disable-next-line import/no-extraneous-dependencies, global-require
-            import('electron').then(({ ipcRenderer }) => {
-                ipcRenderer.send('set-edited', true);
-            });
-        }
+        setDocumentEdited(true);
+    });
+
+    intrigueDocument.on('migrated', () => {
+        setDocumentEdited(true);
     });
 
     intrigueDocument.on('saved', () => {
         Message.success('Saved!');
-        if (isElectron()) {
-            // eslint-disable-next-line import/no-extraneous-dependencies, global-require
-            import('electron').then(({ ipcRenderer }) => {
-                ipcRenderer.send('set-edited', false);
-            });
-        }
+        setDocumentEdited(false);
     });
 
     intrigueDocument.on('save-error', () => {

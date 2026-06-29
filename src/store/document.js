@@ -4,9 +4,41 @@ import { reactive } from 'vue';
 import { nanoid } from 'nanoid';
 
 import propByPath from '@/utils/prop';
+import packageInfo from '../../package.json';
 
 import ReversibleDocument from './undo';
 import NodeTypes from './types';
+
+const CURRENT_DOCUMENT_VERSION = packageInfo.version;
+const VALID_LINK_HANDLES = ['top', 'right', 'bottom', 'left'];
+
+function isValidLinkHandle(handle) {
+    return VALID_LINK_HANDLES.includes(handle);
+}
+
+function parseVersion(version) {
+    if (typeof version !== 'string') return null;
+    const parts = version.split('.').map((part) => Number.parseInt(part, 10));
+    if (parts.length < 3 || parts.some((part) => Number.isNaN(part))) return null;
+    return parts.slice(0, 3);
+}
+
+function compareVersions(a, b) {
+    const parsedA = parseVersion(a);
+    const parsedB = parseVersion(b);
+    if (!parsedA || !parsedB) return null;
+
+    for (let i = 0; i < 3; i += 1) {
+        if (parsedA[i] > parsedB[i]) return 1;
+        if (parsedA[i] < parsedB[i]) return -1;
+    }
+    return 0;
+}
+
+function getNodeNumber(node, keys, fallback) {
+    const key = keys.find((item) => typeof node[item] === 'number');
+    return key ? node[key] : fallback;
+}
 
 export default class IntrigueDocument extends ReversibleDocument {
     constructor() {
@@ -26,6 +58,123 @@ export default class IntrigueDocument extends ReversibleDocument {
         this.registerInverses('updateNodes', 'updateNodes');
         this.registerInverses('snapNode', 'unsnapNode');
         this.registerInverses('createLink', 'removeLink');
+    }
+
+    initSync(documentId) {
+        super.initSync(documentId);
+        if (!this.store.metadata.version) {
+            this.store.metadata.version = CURRENT_DOCUMENT_VERSION;
+        }
+    }
+
+    getMigrationNodeHeight(nodeId, visited = new Set()) {
+        const node = this.store.nodes[nodeId];
+        if (!node) return 20;
+        if (visited.has(nodeId)) return getNodeNumber(node, ['h', 'currentHeight'], 20);
+        visited.add(nodeId);
+        return getNodeNumber(node, ['h', 'currentHeight'], 20);
+    }
+
+    getMigrationNodePosition(nodeId, visited = new Set()) {
+        const node = this.store.nodes[nodeId];
+        if (!node) return { x: 0, y: 0 };
+        if (visited.has(nodeId)) {
+            return {
+                x: getNodeNumber(node, ['x', 'currentX'], 0),
+                y: getNodeNumber(node, ['y', 'currentY'], 0),
+            };
+        }
+        visited.add(nodeId);
+
+        if (!node.parent || !this.store.nodes[node.parent]) {
+            return {
+                x: getNodeNumber(node, ['x', 'currentX'], 0),
+                y: getNodeNumber(node, ['y', 'currentY'], 0),
+            };
+        }
+
+        const parentPosition = this.getMigrationNodePosition(node.parent, visited);
+        return {
+            x: parentPosition.x,
+            y: parentPosition.y + this.getMigrationNodeHeight(node.parent) + 5,
+        };
+    }
+
+    getMigrationNodeRect(nodeId) {
+        const node = this.store.nodes[nodeId];
+        if (!node) return null;
+        const position = this.getMigrationNodePosition(nodeId);
+        return {
+            x: position.x,
+            y: position.y,
+            w: getNodeNumber(node, ['w', 'currentWidth'], 200),
+            h: getNodeNumber(node, ['h', 'currentHeight'], 20),
+        };
+    }
+
+    guessLinkHandles(sourceId, targetId) {
+        const source = this.getMigrationNodeRect(sourceId);
+        const target = this.getMigrationNodeRect(targetId);
+        if (!source || !target) return null;
+
+        const sourceCenter = {
+            x: source.x + source.w / 2,
+            y: source.y + source.h / 2,
+        };
+        const targetCenter = {
+            x: target.x + target.w / 2,
+            y: target.y + target.h / 2,
+        };
+        const dx = targetCenter.x - sourceCenter.x;
+        const dy = targetCenter.y - sourceCenter.y;
+        const normalizedX = Math.abs(dx) / Math.max((source.w + target.w) / 2, 1);
+        const normalizedY = Math.abs(dy) / Math.max((source.h + target.h) / 2, 1);
+
+        if (normalizedX >= normalizedY) {
+            return dx >= 0
+                ? { sourceHandle: 'right', targetHandle: 'left' }
+                : { sourceHandle: 'left', targetHandle: 'right' };
+        }
+
+        return dy >= 0
+            ? { sourceHandle: 'bottom', targetHandle: 'top' }
+            : { sourceHandle: 'top', targetHandle: 'bottom' };
+    }
+
+    migrateDocumentVersion() {
+        const existingVersion = this.store.metadata.version;
+        const comparison = compareVersions(existingVersion, CURRENT_DOCUMENT_VERSION);
+        if (existingVersion === CURRENT_DOCUMENT_VERSION) return false;
+        if (comparison !== null && comparison > 0) return false;
+
+        this.store.metadata.version = CURRENT_DOCUMENT_VERSION;
+        return true;
+    }
+
+    migrateLinks() {
+        let migrated = false;
+        Object.values(this.store.links).forEach((link) => {
+            if (!link || !link.source || !link.target) return;
+            if (!this.store.nodes[link.source] || !this.store.nodes[link.target]) return;
+            const guessedHandles = this.guessLinkHandles(link.source, link.target);
+            if (!guessedHandles) return;
+
+            if (!isValidLinkHandle(link.sourceHandle)) {
+                link.sourceHandle = guessedHandles.sourceHandle;
+                migrated = true;
+            }
+            if (!isValidLinkHandle(link.targetHandle)) {
+                link.targetHandle = guessedHandles.targetHandle;
+                migrated = true;
+            }
+        });
+        return migrated;
+    }
+
+    migrateLoadedDocument() {
+        const migratedLinks = this.migrateLinks();
+        const migratedVersion = this.migrateDocumentVersion();
+        return migratedLinks || migratedVersion;
     }
 
     // Note: each function below should return its inverse parameters
