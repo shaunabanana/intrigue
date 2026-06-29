@@ -11,7 +11,6 @@ const ViewingState = {
                 'editing title': 'TitleEditing',
                 'space pressed': { target: 'Panning', actions: 'setPanning' },
                 'start dragging': { target: 'Dragging', actions: 'setDragging' },
-                'start linking': { target: 'Linking', actions: 'setLinking' },
                 'update selection': { target: 'Selecting', actions: 'setSelection' },
                 'create node': { target: '#Intrigue.Editing', actions: 'setEditing' },
                 'delete node': { target: 'Idle', actions: 'clearSelection' },
@@ -58,13 +57,6 @@ const ViewingState = {
             },
         },
 
-        Linking: {
-            on: {
-                'update selection': { target: 'Idle', actions: ['clearLinking', 'setSelection'] },
-                'click on empty canvas': { target: 'Idle', actions: 'clearLinking' },
-                'create node': { target: '#Intrigue.Editing', actions: ['clearLinking', 'setEditing'] },
-            },
-        },
     },
 };
 
@@ -120,7 +112,6 @@ const intrigueMachine = createMachine(
             dropping: null,
             selection: [],
             detaching: [],
-            linking: null,
         },
     },
     {
@@ -173,13 +164,6 @@ const intrigueMachine = createMachine(
                 selection: (context) => (context.selection = []),
             }),
 
-            setLinking: assign({
-                linking: (context, event) => (context.linking = event.node),
-            }),
-
-            clearLinking: assign({
-                linking: (context) => (context.linking = null),
-            }),
         },
     },
 );

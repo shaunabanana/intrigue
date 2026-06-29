@@ -1,7 +1,6 @@
 <template>
     <TitleBar />
     <DocumentCanvas />
-    <PointerTracker />
     <Debug v-if="debug"/>
 </template>
 
@@ -23,8 +22,7 @@ import { useMachine } from '@xstate/vue';
 import tutorialData from '@/utils/tutorial';
 
 import TitleBar from '@/components/window/TitleBar.vue';
-import DocumentCanvas from '@/components/canvas/Canvas.vue';
-import PointerTracker from '@/components/canvas/PointerTracker.vue';
+import DocumentCanvas from '@/components/canvas/VueFlowCanvas.vue';
 import Debug from '@/components/utils/Debug.vue';
 
 const intrigueDocument = reactive(new IntrigueDocument());
@@ -169,6 +167,8 @@ body,
     width: 100%;
     height: 100%;
     overflow: hidden;
+    font-family: 'Atkinson Hyperlegible', system-ui, -apple-system, BlinkMacSystemFont,
+        'Segoe UI', sans-serif;
     background: var(--background);
 }
 

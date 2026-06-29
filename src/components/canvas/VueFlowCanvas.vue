@@ -1,0 +1,617 @@
+<template>
+    <div class="vue-flow-canvas-wrapper">
+        <VueFlow
+            class="canvas vue-flow-canvas"
+            :nodes="flowNodes"
+            :edges="flowEdges"
+            :node-types="nodeTypes"
+            :edge-types="edgeTypes"
+            :connection-mode="ConnectionMode.Loose"
+            :default-edge-options="defaultEdgeOptions"
+            :delete-key-code="null"
+            :multi-selection-key-code="'Shift'"
+            :selection-key-code="null"
+            :pan-on-drag="panning ? [0] : [1, 2]"
+            :select-nodes-on-drag="!panning"
+            :zoom-on-scroll="true"
+            :zoom-on-double-click="false"
+            @dblclick="onCanvasDoubleClick"
+            @pane-click="onPaneClick"
+            @pane-mouse-move="updateCursorPosition"
+            @node-double-click="doubleClickNode"
+            @node-drag-start="onNodeDragStart"
+            @node-drag="onNodeDrag"
+            @node-drag-stop="onNodeDragStop"
+            @selection-drag-start="onNodeDragStart"
+            @selection-drag="onNodeDrag"
+            @selection-drag-stop="onNodeDragStop"
+            @nodes-change="onNodesChange"
+            @edges-change="onEdgesChange"
+            @connect="onConnect"
+        >
+            <Background :gap="13" :size="1" />
+            <MiniMap />
+            <Controls
+                :show-interactive="false"
+                :show-zoom="false"
+            />
+        </VueFlow>
+
+        <Cursor
+            v-for="user in remoteUsers"
+            :key="user.id"
+            :id="user.id"
+            :name="user.name"
+            :x="user.screenX"
+            :y="user.screenY"
+        />
+    </div>
+</template>
+
+<script setup>
+import {
+    computed, inject, markRaw, onBeforeUnmount, onMounted, provide, ref,
+} from 'vue';
+import {
+    ConnectionMode, VueFlow, useVueFlow,
+} from '@vue-flow/core';
+import { Background } from '@vue-flow/background';
+import { MiniMap } from '@vue-flow/minimap';
+import { Controls } from '@vue-flow/controls';
+import { nanoid } from 'nanoid';
+
+import { NodeTypes } from '@/store';
+import Keyboard from '@/keyboard';
+
+import Cursor from '@/components/canvas/Cursor.vue';
+import IntrigueFlowEdge from '@/components/canvas/IntrigueFlowEdge.vue';
+import IntrigueFlowNode from '@/components/canvas/IntrigueFlowNode.vue';
+
+import '@vue-flow/core/dist/style.css';
+import '@vue-flow/core/dist/theme-default.css';
+import '@vue-flow/node-resizer/dist/style.css';
+import '@vue-flow/minimap/dist/style.css';
+import '@vue-flow/controls/dist/style.css';
+
+const intrigueDocument = inject('document');
+const store = inject('store');
+const send = inject('send');
+const editing = inject('editing');
+const dragging = inject('dragging');
+const dropping = inject('dropping');
+const detaching = inject('detaching');
+const panning = inject('panning');
+
+const keyboard = new Keyboard();
+const selectionIds = ref([]);
+const selectedEdgeIds = ref([]);
+const dragStartPositions = ref({});
+const viewport = ref({ x: 0, y: 0, zoom: 1 });
+const nodeTypes = {
+    intrigue: markRaw(IntrigueFlowNode),
+};
+const edgeTypes = {
+    intrigue: markRaw(IntrigueFlowEdge),
+};
+const edgeColor = '#9A9A9B';
+const selectedEdgeColor = 'rgb(255, 112, 143)';
+const defaultEdgeOptions = {
+    type: 'intrigue',
+    style: {
+        stroke: edgeColor,
+        strokeWidth: 1.5,
+    },
+};
+
+const {
+    screenToFlowCoordinate,
+    flowToScreenCoordinate,
+    getIntersectingNodes,
+    onViewportChange,
+    updateNode,
+} = useVueFlow();
+
+provide('selection', computed(() => selectionIds.value));
+
+const flowEdges = computed(() => Object.values(store.value.links).map((link) => {
+    const selected = selectedEdgeIds.value.includes(link.id);
+    const color = selected ? selectedEdgeColor : edgeColor;
+    return {
+        id: link.id,
+        source: link.source,
+        target: link.target,
+        sourceHandle: link.sourceHandle || null,
+        targetHandle: link.targetHandle || null,
+        type: 'intrigue',
+        selectable: true,
+        selected,
+        style: {
+            stroke: color,
+            strokeWidth: 1.5,
+        },
+    };
+}));
+
+const remoteUsers = computed(() => Object.values(intrigueDocument.users || {})
+    .filter((user) => intrigueDocument.localUser && intrigueDocument.localUser.id !== user.id)
+    .filter((user) => typeof user.cursorX === 'number' && typeof user.cursorY === 'number')
+    .map((user) => {
+        // Track viewport changes so cursor screen positions recompute after pan/zoom.
+        const currentViewport = viewport.value;
+        const screenPosition = flowToScreenCoordinate({
+            x: user.cursorX,
+            y: user.cursorY,
+        });
+        return {
+            ...user,
+            screenX: screenPosition.x + currentViewport.zoom * 0,
+            screenY: screenPosition.y,
+        };
+    }));
+
+function getNodeLocalData(nodeId) {
+    if (!intrigueDocument.localData.nodes[nodeId]) {
+        intrigueDocument.localData.nodes[nodeId] = {};
+    }
+    return intrigueDocument.localData.nodes[nodeId];
+}
+
+function getNodeWidth(nodeId) {
+    const node = store.value.nodes[nodeId];
+    const localData = getNodeLocalData(nodeId);
+    if (node.parent) return getNodeWidth(node.parent);
+    return localData.currentWidth ?? node.w ?? 200;
+}
+
+function getNodeHeight(nodeId) {
+    const node = store.value.nodes[nodeId];
+    const localData = getNodeLocalData(nodeId);
+    return localData.currentHeight ?? node.h ?? 20;
+}
+
+function getNodePosition(nodeId, visited = new Set()) {
+    const node = store.value.nodes[nodeId];
+    if (!node) return { x: 0, y: 0 };
+    if (visited.has(nodeId)) return { x: node.x || 0, y: node.y || 0 };
+    visited.add(nodeId);
+
+    if (!node.parent || !store.value.nodes[node.parent]) {
+        const localData = getNodeLocalData(nodeId);
+        return {
+            x: localData.currentX ?? node.x ?? 0,
+            y: localData.currentY ?? node.y ?? 0,
+        };
+    }
+
+    const parentPosition = getNodePosition(node.parent, visited);
+    return {
+        x: parentPosition.x,
+        y: parentPosition.y + getNodeHeight(node.parent) + 5,
+    };
+}
+
+function isDescendant(ancestorId, nodeId) {
+    const node = store.value.nodes[nodeId];
+    if (!node || !node.parent) return false;
+    if (node.parent === ancestorId) return true;
+    return isDescendant(ancestorId, node.parent);
+}
+
+function canSnap(sourceId, targetId, movingIds = []) {
+    if (!sourceId || !targetId || sourceId === targetId) return false;
+    if (movingIds.includes(sourceId)) return false;
+    const source = store.value.nodes[sourceId];
+    const target = store.value.nodes[targetId];
+    if (!source || !target) return false;
+    if (target.parent === sourceId) return false;
+    if (isDescendant(targetId, sourceId)) return false;
+    if (source.type !== NodeTypes.Area && (source.children || []).length > 0) return false;
+    return true;
+}
+
+function getGraphNodeRect(graphNode) {
+    const position = graphNode.computedPosition || graphNode.position || { x: 0, y: 0 };
+    const width = graphNode.dimensions && graphNode.dimensions.width
+        ? graphNode.dimensions.width
+        : getNodeWidth(graphNode.id);
+    const height = graphNode.dimensions && graphNode.dimensions.height
+        ? graphNode.dimensions.height
+        : getNodeHeight(graphNode.id);
+    return {
+        x: position.x,
+        y: position.y,
+        width,
+        height,
+    };
+}
+
+function getOverlapArea(a, b) {
+    const x = Math.max(0, Math.min(a.x + a.width, b.x + b.width) - Math.max(a.x, b.x));
+    const y = Math.max(0, Math.min(a.y + a.height, b.y + b.height) - Math.max(a.y, b.y));
+    return x * y;
+}
+
+function chooseBestDropTarget(activeNode, candidates) {
+    if (candidates.length === 0) return null;
+    const activeRect = getGraphNodeRect(activeNode);
+    return candidates.reduce((best, candidate) => {
+        const area = getOverlapArea(activeRect, getGraphNodeRect(candidate));
+        if (!best || area > best.area) return { node: candidate, area };
+        return best;
+    }, null).node;
+}
+
+function updateDropTarget(activeNode, movingIds) {
+    if (!activeNode) return;
+    const intersections = getIntersectingNodes(activeNode, true)
+        .filter((candidate) => canSnap(candidate.id, activeNode.id, movingIds));
+    const target = chooseBestDropTarget(activeNode, intersections);
+
+    if (target && dropping.value !== target.id) {
+        if (dropping.value) {
+            send({ type: 'drop leave', node: dropping.value });
+        }
+        send({ type: 'drop enter', node: target.id });
+    } else if (!target && dropping.value) {
+        send({ type: 'drop leave', node: dropping.value });
+    }
+}
+
+const flowNodes = computed(() => Object.values(store.value.nodes).map((node) => {
+    const position = getNodePosition(node.id);
+    const width = getNodeWidth(node.id);
+
+    return {
+        id: node.id,
+        type: 'intrigue',
+        position,
+        data: { node },
+        selected: selectionIds.value.includes(node.id),
+        draggable: editing.value !== node.id,
+        selectable: true,
+        connectable: true,
+        style: {
+            width: `${width}px`,
+        },
+    };
+}));
+
+function setSelection(ids) {
+    if (ids.length > 0) selectedEdgeIds.value = [];
+    selectionIds.value = ids;
+    intrigueDocument.updateAwareness('selection', ids);
+    send({
+        type: 'update selection',
+        selection: ids,
+    });
+    send({
+        type: 'done selecting',
+        selection: ids,
+    });
+}
+
+function newNode(event) {
+    if (editing.value) return;
+    const position = screenToFlowCoordinate({
+        x: event.clientX,
+        y: event.clientY,
+    });
+    const nodeId = nanoid();
+    intrigueDocument.commit('createNode', {
+        id: nodeId,
+        type: NodeTypes.Note,
+        content: '',
+        x: position.x - 14,
+        y: position.y - 10,
+        w: 200,
+        h: 15,
+    });
+    setSelection([nodeId]);
+    send({
+        type: 'create node',
+        node: nodeId,
+    });
+}
+
+function onCanvasDoubleClick(event) {
+    const { target } = event;
+    if (!(target instanceof Element)) return;
+    if (target.closest('.vue-flow__node, .vue-flow__edge, .vue-flow__handle')) return;
+    newNode(event);
+}
+
+function onPaneClick() {
+    if (!editing.value) {
+        setSelection([]);
+        selectedEdgeIds.value = [];
+    }
+}
+
+function doubleClickNode({ node }) {
+    send({
+        type: 'dblclick node',
+        node: node.id,
+    });
+}
+
+function onNodesChange(changes) {
+    const selectionChanges = changes.filter((change) => change.type === 'select');
+    if (selectionChanges.length === 0) return;
+
+    const nextSelection = new Set(selectionIds.value);
+    selectionChanges.forEach((change) => {
+        if (change.selected) nextSelection.add(change.id);
+        else nextSelection.delete(change.id);
+    });
+    setSelection([...nextSelection]);
+}
+
+function onEdgesChange(changes) {
+    const selectionChanges = changes.filter((change) => change.type === 'select');
+    if (selectionChanges.length === 0) return;
+
+    const nextSelection = new Set(selectedEdgeIds.value);
+    selectionChanges.forEach((change) => {
+        if (change.selected) nextSelection.add(change.id);
+        else nextSelection.delete(change.id);
+    });
+    selectedEdgeIds.value = [...nextSelection];
+    if (selectedEdgeIds.value.length > 0 && selectionIds.value.length > 0) {
+        setSelection([]);
+    }
+}
+
+function getEventNodes(event) {
+    if (Array.isArray(event.nodes) && event.nodes.length > 0) return event.nodes;
+    if (event.node) return [event.node];
+    return [];
+}
+
+function getDragIds(event) {
+    const ids = getEventNodes(event).map((node) => node.id);
+    return [...new Set(ids)];
+}
+
+function onNodeDragStart(event) {
+    const ids = getDragIds(event);
+    const positions = {};
+    ids.forEach((id) => {
+        positions[id] = getNodePosition(id);
+    });
+    dragStartPositions.value = positions;
+    const dragNodeId = event.node ? event.node.id : ids[0];
+    if (!dragNodeId) return;
+    send({
+        type: 'start dragging',
+        node: dragNodeId,
+    });
+}
+
+function onNodeDrag(event) {
+    const ids = getDragIds(event);
+    const eventNodes = getEventNodes(event);
+    eventNodes.forEach((node) => {
+        const item = store.value.nodes[node.id];
+        if (item && item.parent && !ids.includes(item.parent)) return;
+        const localData = getNodeLocalData(node.id);
+        localData.currentX = node.position.x;
+        localData.currentY = node.position.y;
+    });
+
+    ids.forEach((id) => {
+        const item = store.value.nodes[id];
+        if (!item || !item.parent) return;
+        if (ids.includes(item.parent)) return;
+        const start = dragStartPositions.value[id];
+        const activeNode = eventNodes.find((node) => node.id === id);
+        if (!start || !activeNode) return;
+        const dx = activeNode.position.x - start.x;
+        const dy = activeNode.position.y - start.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        if (distance <= 30) {
+            updateNode(id, { position: start });
+            return;
+        }
+        if (distance > 30 && detaching.value.length === 0) {
+            const parentId = item.parent;
+            send({
+                type: 'start detaching',
+                detaching: [{ source: parentId, target: item.id }],
+            });
+            intrigueDocument.commit('unsnapNode', {
+                source: parentId,
+                target: item.id,
+            });
+            send('detached');
+        }
+        const localData = getNodeLocalData(id);
+        localData.currentX = activeNode.position.x;
+        localData.currentY = activeNode.position.y;
+    });
+
+    const activeNode = event.node || eventNodes[0];
+    updateDropTarget(activeNode, ids);
+}
+
+function onNodeDragStop(event) {
+    const ids = getDragIds(event);
+    const eventNodes = getEventNodes(event);
+    const updates = {};
+    const updateIds = [];
+
+    if (
+        dropping.value
+        && dragging.value
+        && dropping.value !== dragging.value
+        && canSnap(dropping.value, dragging.value, ids)
+    ) {
+        intrigueDocument.commit('snapNode', {
+            source: dropping.value,
+            target: dragging.value,
+        });
+        dragStartPositions.value = {};
+        send('stop dragging');
+        return;
+    }
+
+    ids.forEach((id) => {
+        const item = store.value.nodes[id];
+        const activeNode = eventNodes.find((node) => node.id === id) || event.node;
+        if (!item || !activeNode) return;
+
+        if (item.parent) {
+            if (ids.includes(item.parent)) return;
+            const start = dragStartPositions.value[id];
+            if (!start) return;
+            const dx = activeNode.position.x - start.x;
+            const dy = activeNode.position.y - start.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            if (distance <= 30) return;
+            intrigueDocument.commit('unsnapNode', {
+                source: item.parent,
+                target: item.id,
+            });
+        }
+
+        updates[id] = {
+            x: activeNode.position.x,
+            y: activeNode.position.y,
+        };
+        updateIds.push(id);
+    });
+
+    if (updateIds.length > 0) {
+        intrigueDocument.commit('updateNodes', {
+            id: updateIds,
+            set: updates,
+        });
+    }
+
+    dragStartPositions.value = {};
+    if (detaching.value.length > 0) send('stop detaching');
+    send('stop dragging');
+}
+
+function onConnect(connection) {
+    const {
+        source, target, sourceHandle, targetHandle,
+    } = connection;
+    if (!source || !target || source === target) return;
+
+    const existingLinkId = Object.keys(store.value.links).find((linkId) => {
+        const link = store.value.links[linkId];
+        return link.source === source
+            && link.target === target
+            && (link.sourceHandle || null) === (sourceHandle || null)
+            && (link.targetHandle || null) === (targetHandle || null);
+    });
+    if (existingLinkId) {
+        intrigueDocument.commit('removeLink', existingLinkId);
+    } else {
+        intrigueDocument.commit('createLink', {
+            source,
+            target,
+            sourceHandle,
+            targetHandle,
+        });
+    }
+}
+
+function deleteSelection(event) {
+    if (editing.value) return;
+    if (selectionIds.value.length === 0 && selectedEdgeIds.value.length === 0) return;
+    const selectedIds = [...selectionIds.value];
+    const selectedLinks = [...selectedEdgeIds.value];
+    setSelection([]);
+    selectedEdgeIds.value = [];
+    selectedLinks.forEach((linkId) => {
+        if (store.value.links[linkId]) intrigueDocument.commit('removeLink', linkId);
+    });
+    if (selectedIds.length > 0) {
+        send('delete node');
+        intrigueDocument.commit('deleteNodes', selectedIds);
+    }
+    event.preventDefault();
+}
+
+function undo(event) {
+    if (editing.value === null) {
+        intrigueDocument.undo();
+        event.preventDefault();
+    }
+}
+
+function redo(event) {
+    if (editing.value === null) {
+        intrigueDocument.redo();
+        event.preventDefault();
+    }
+}
+
+function startPanning(event) {
+    if (!editing.value) {
+        send('space pressed');
+        event.preventDefault();
+        event.stopPropagation();
+    }
+}
+
+function stopPanning(event) {
+    if (!editing.value) {
+        send('space released');
+        event.preventDefault();
+        event.stopPropagation();
+    }
+}
+
+function updateCursorPosition(event) {
+    const position = screenToFlowCoordinate({
+        x: event.clientX,
+        y: event.clientY,
+    });
+    intrigueDocument.updateAwareness('cursorX', position.x);
+    intrigueDocument.updateAwareness('cursorY', position.y);
+}
+
+onViewportChange((newViewport) => {
+    viewport.value = newViewport;
+});
+
+onMounted(() => {
+    keyboard.on('keydown', 'Space', startPanning);
+    keyboard.on('keyup', 'Space', stopPanning);
+    keyboard.on('keydown', 'Backspace', deleteSelection);
+    keyboard.on('keydown', '$mod+Z', undo);
+    keyboard.on('keydown', '$mod+Shift+Z', redo);
+
+    intrigueDocument.on('synced', () => {
+        setSelection([]);
+    });
+});
+
+onBeforeUnmount(() => {
+    keyboard.removeListeners();
+});
+</script>
+
+<style>
+.vue-flow-canvas-wrapper {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
+}
+
+.vue-flow-canvas {
+    width: 100vw;
+    height: 100vh;
+    background: transparent;
+}
+
+.vue-flow-canvas .vue-flow__node-intrigue {
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+}
+
+</style>

@@ -244,6 +244,8 @@ export default class IntrigueDocument extends ReversibleDocument {
             id: linkId,
             source: params.source,
             target: params.target,
+            sourceHandle: params.sourceHandle || null,
+            targetHandle: params.targetHandle || null,
         };
         state.links[linkId] = link;
 
