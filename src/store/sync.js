@@ -68,6 +68,11 @@ export default class SyncedDocument extends EventEmitter {
             console.log('[Sync][saveProvider@synced] Save provider saved.');
             this.emit('saved');
         });
+
+        this.saveProvider.on('save-error', (error) => {
+            console.error('[Sync][saveProvider@save-error] Failed to save.', error);
+            this.emit('save-error', error);
+        });
     }
 
     close() {

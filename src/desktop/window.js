@@ -6,9 +6,57 @@ import {
 import { basename } from 'path';
 import is from 'electron-is';
 
+function chooseSavePath(window) {
+    return dialog.showSaveDialogSync(window, {
+        filters: [
+            { name: 'Intrigue Files', extensions: ['intrigue'] },
+        ],
+        properties: [
+            'showOverwriteConfirmation', 'createDirectory',
+        ],
+    });
+}
+
 export class EditorWindowManager {
     constructor() {
         this.windows = [];
+        this.allowCloseWindows = new WeakSet();
+    }
+
+    promptToClose(window) {
+        const hasFilePath = Boolean(this.getFilePath(window));
+        const result = dialog.showMessageBoxSync(window, {
+            type: 'warning',
+            buttons: hasFilePath ? ['Save', "Don't Save", 'Cancel'] : ['Save...', 'Delete', 'Cancel'],
+            defaultId: 0,
+            cancelId: 2,
+            noLink: true,
+            message: hasFilePath
+                ? 'Do you want to save changes to this document?'
+                : 'Do you want to save this new document?',
+            detail: hasFilePath
+                ? 'Your changes will be lost if you close without saving.'
+                : 'This document will be deleted if you close without saving.',
+        });
+
+        return result;
+    }
+
+    closeAfterSave(window) {
+        let attempts = 0;
+        const checkSaved = () => {
+            if (window.isDestroyed()) return;
+            if (window.documentEdited) {
+                attempts += 1;
+                if (attempts > 300) return;
+                setTimeout(checkSaved, 100);
+            } else {
+                this.allowCloseWindows.add(window);
+                window.close();
+            }
+        };
+
+        checkSaved();
     }
 
     async createWindow(filePath) {
@@ -38,37 +86,33 @@ export class EditorWindowManager {
             window.webContents.send('unmaximize');
         });
 
-        window.once('close', (e) => {
-            if (window.documentEdited) {
-                e.preventDefault();
-                const savePath = this.getFilePath(window);
-                if (savePath) {
-                    // Manually save file here.
-                    window.webContents.send('save-file');
-                } else {
-                    const newSavePath = dialog.showSaveDialogSync(window, {
-                        filters: [
-                            { name: 'Intrigue Files', extensions: ['intrigue'] },
-                        ],
-                        properties: [
-                            'showOverwriteConfirmation', 'createDirectory',
-                        ],
-                    });
-                    if (newSavePath) {
-                        this.setFilePath(window, newSavePath, true);
-                    } else {
-                        window.close();
-                        return;
-                    }
-                }
-
-                const checkSaved = () => {
-                    if (window.documentEdited) setTimeout(checkSaved, 100);
-                    else window.close();
-                };
-
-                checkSaved();
+        window.on('close', (e) => {
+            if (this.allowCloseWindows.has(window)) {
+                this.allowCloseWindows.delete(window);
+                return;
             }
+            if (!window.documentEdited) return;
+
+            e.preventDefault();
+            const closeChoice = this.promptToClose(window);
+            if (closeChoice === 2) return;
+
+            if (closeChoice === 1) {
+                this.allowCloseWindows.add(window);
+                window.close();
+                return;
+            }
+
+            const savePath = this.getFilePath(window);
+            if (savePath) {
+                window.webContents.send('save-file');
+            } else {
+                const newSavePath = chooseSavePath(window);
+                if (!newSavePath) return;
+                this.setFilePath(window, newSavePath, true);
+            }
+
+            this.closeAfterSave(window);
         });
 
         window.once('ready-to-show', () => {

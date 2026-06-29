@@ -13,12 +13,15 @@ ipcMain.on('set-edited', () => {
 });
 
 export function saveFile(item, window) {
-    const filePath = windowManager.getFilePath(window);
+    const targetWindow = window || BrowserWindow.getFocusedWindow();
+    if (!targetWindow) return;
+
+    const filePath = windowManager.getFilePath(targetWindow);
     if (filePath) {
         // Manually save file here.
-        window.webContents.send('save-file');
+        targetWindow.webContents.send('save-file');
     } else {
-        const savePath = dialog.showSaveDialogSync(window, {
+        const savePath = dialog.showSaveDialogSync(targetWindow, {
             filters: [
                 { name: 'Intrigue Files', extensions: ['intrigue'] },
             ],
@@ -26,7 +29,8 @@ export function saveFile(item, window) {
                 'showOverwriteConfirmation', 'createDirectory',
             ],
         });
-        windowManager.setFilePath(window, savePath, true);
+        if (!savePath) return;
+        windowManager.setFilePath(targetWindow, savePath, true);
     }
 }
 

@@ -90,6 +90,10 @@ onMounted(() => {
         }
     });
 
+    intrigueDocument.on('save-error', () => {
+        Message.error('Failed to save.');
+    });
+
     // Prevent space from causing scrolling down behavior.
     window.addEventListener('keydown', preventSpaceScroll);
 

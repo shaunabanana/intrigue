@@ -71,6 +71,8 @@ export default class LocalFilePersistence extends EventEmitter {
         this.writeFile(this.filePath, encodeStateAsUpdate(this.doc)).then(() => {
             // if (callback) callback();
             this.emit('saved');
+        }).catch((error) => {
+            this.emit('save-error', error);
         });
     }
 }
