@@ -74,6 +74,10 @@ onMounted(() => {
         setDocumentEdited(true);
     });
 
+    intrigueDocument.on('remote-update', () => {
+        setDocumentEdited(true);
+    });
+
     intrigueDocument.on('migrated', () => {
         setDocumentEdited(true);
     });
