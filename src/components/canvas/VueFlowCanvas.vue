@@ -45,6 +45,24 @@
             :x="user.screenX"
             :y="user.screenY"
         />
+
+        <div
+            v-if="contextualHelp.length > 0"
+            class="contextual-help noselect"
+            aria-live="polite"
+        >
+            <span
+                v-for="item in contextualHelp"
+                :key="item.id"
+                class="contextual-help-item"
+            >
+                <kbd
+                    v-if="item.shortcut"
+                    class="contextual-help-key"
+                >{{ item.shortcut }}</kbd>
+                <span>{{ item.text }}</span>
+            </span>
+        </div>
     </div>
 </template>
 
@@ -95,6 +113,11 @@ const edgeTypes = {
 };
 const edgeColor = '#9A9A9B';
 const selectedEdgeColor = 'rgb(255, 112, 143)';
+const platform = window.navigator.platform || window.navigator.userAgent || '';
+const isApplePlatform = /Mac|iPhone|iPad|iPod/.test(platform);
+const shortcutModifier = isApplePlatform ? '⌘' : 'Ctrl';
+const shiftKey = isApplePlatform ? '⇧' : 'Shift';
+const shortcutSeparator = isApplePlatform ? '' : '+';
 const defaultEdgeOptions = {
     type: 'intrigue',
     style: {
@@ -275,6 +298,72 @@ const flowNodes = computed(() => Object.values(store.value.nodes).map((node) => 
         },
     };
 }));
+
+const hasSelection = computed(() => (
+    selectionIds.value.length > 0 || selectedEdgeIds.value.length > 0
+));
+const hasNodeSelection = computed(() => selectionIds.value.length > 0);
+const hasEdgeSelection = computed(() => selectedEdgeIds.value.length > 0);
+
+function shortcutLabel(keys) {
+    return keys.join(shortcutSeparator);
+}
+
+const contextualHelp = computed(() => {
+    if (dropping.value) {
+        return [
+            {
+                id: 'snap-drop-now',
+                text: 'Drop now to snap.',
+            },
+        ];
+    }
+
+    if (dragging.value) {
+        return [
+            {
+                id: 'snap-drop',
+                text: 'Drop the node onto another to snap them.',
+            },
+        ];
+    }
+
+    if (editing.value) {
+        return [
+            { id: 'bold', shortcut: shortcutLabel([shortcutModifier, 'B']), text: 'bold' },
+            { id: 'italic', shortcut: shortcutLabel([shortcutModifier, 'I']), text: 'italic' },
+            {
+                id: 'strike',
+                shortcut: shortcutLabel([shortcutModifier, shiftKey, 'S']),
+                text: 'strikethrough',
+            },
+            { id: 'underline', shortcut: shortcutLabel([shortcutModifier, 'U']), text: 'underline' },
+            { id: 'markdown', text: 'Markdown syntax apply.' },
+        ];
+    }
+
+    if (hasNodeSelection.value) {
+        return [
+            { id: 'edit', shortcut: 'Double-click', text: 'to edit the node' },
+        ];
+    }
+
+    if (hasEdgeSelection.value) {
+        return [
+            { id: 'delete-edge', shortcut: 'Backspace', text: 'to delete' },
+        ];
+    }
+
+    if (!hasSelection.value) {
+        return [
+            { id: 'pan', shortcut: 'Space', text: 'to pan' },
+            { id: 'select', shortcut: 'Shift', text: 'to multi-select' },
+            { id: 'create', shortcut: 'Double-click', text: 'to create/edit a node' },
+        ];
+    }
+
+    return [];
+});
 
 function setSelection(ids) {
     if (ids.length > 0) selectedEdgeIds.value = [];
@@ -612,6 +701,66 @@ onBeforeUnmount(() => {
     border: 0;
     background: transparent;
     box-shadow: none;
+}
+
+.vue-flow-canvas .vue-flow__nodesselection-rect {
+    display: none;
+}
+
+.contextual-help {
+    position: fixed;
+    left: 50%;
+    bottom: calc(1.2rem + env(safe-area-inset-bottom, 0));
+    z-index: 1000;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: 0.34rem 0.62rem;
+    max-width: min(44rem, calc(100vw - 2rem));
+    padding: 0.34rem 0.56rem;
+    color: rgba(70, 75, 80, 0.72);
+    font-size: 0.72rem;
+    line-height: 1.4;
+    text-align: center;
+    pointer-events: none;
+    background: rgba(248, 249, 249, 0.78);
+    border: 1px solid rgba(116, 122, 128, 0.12);
+    border-radius: 999px;
+    box-shadow: 0 8px 22px rgba(25, 29, 33, 0.06);
+    transform: translateX(-50%);
+    backdrop-filter: blur(8px);
+}
+
+.contextual-help-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.22rem;
+    white-space: nowrap;
+}
+
+.contextual-help-key {
+    padding: 0.01rem 0.2rem;
+    color: rgba(50, 55, 60, 0.78);
+    font: inherit;
+    font-size: 0.66rem;
+    line-height: 1.28;
+    background: rgba(255, 255, 255, 0.74);
+    border: 1px solid rgba(88, 94, 100, 0.16);
+    border-radius: 0.32rem;
+    box-shadow: 0 1px 0 rgba(88, 94, 100, 0.10);
+}
+
+@media (max-width: 640px) {
+    .contextual-help {
+        bottom: calc(0.85rem + env(safe-area-inset-bottom, 0));
+        max-width: calc(100vw - 1rem);
+        border-radius: 0.9rem;
+    }
+
+    .contextual-help-item {
+        white-space: normal;
+    }
 }
 
 </style>
