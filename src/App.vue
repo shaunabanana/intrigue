@@ -24,7 +24,7 @@ import TitleBar from '@/components/window/TitleBar.vue';
 import DocumentCanvas from '@/components/canvas/VueFlowCanvas.vue';
 import Debug from '@/components/utils/Debug.vue';
 
-const intrigueDocument = reactive(new IntrigueDocument());
+const intrigueDocument = new IntrigueDocument();
 const store = computed(() => intrigueDocument.store);
 const appState = reactive({
     users: [],
@@ -87,6 +87,10 @@ onMounted(() => {
         Message.error('Failed to save.');
     });
 
+    intrigueDocument.on('sync-error', () => {
+        Message.error('Failed to start document sync.');
+    });
+
     // Prevent space from causing scrolling down behavior.
     window.addEventListener('keydown', preventSpaceScroll);
 
@@ -114,10 +118,10 @@ onMounted(() => {
     } else {
         const queryString = window.location.search;
         const urlParams = new URLSearchParams(queryString);
-        console.log(`[App][mounted] urlParams.document is ${urlParams.get('document')}`);
-        intrigueDocument.initSync(urlParams.get('document'));
+        const documentId = urlParams.get('document');
+        console.log(`[App][mounted] urlParams.document is ${documentId}`);
 
-        if (urlParams.get('document') === 'tutorial') {
+        if (documentId === 'tutorial') {
             console.log('[App][mounted@web] Loading tutorial data...');
             Object.keys(tutorialData.nodes).forEach((nodeId) => {
                 store.value.nodes[nodeId] = tutorialData.nodes[nodeId];
@@ -126,8 +130,9 @@ onMounted(() => {
             Object.keys(tutorialData.links).forEach((linkId) => {
                 store.value.links[linkId] = tutorialData.links[linkId];
             });
+            intrigueDocument.initSync(documentId);
         } else {
-            intrigueDocument.initPersistence(urlParams.get('document'));
+            intrigueDocument.initPersistence(documentId);
         }
     }
 });

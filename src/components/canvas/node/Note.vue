@@ -107,6 +107,24 @@ watch(() => props.editing, () => {
     transform: translateY(1px);
 }
 
+.ProseMirror[contenteditable="true"] {
+    -webkit-touch-callout: default;
+    -webkit-user-select: text;
+    -khtml-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
+    user-select: text;
+}
+
+.ProseMirror[contenteditable="false"] {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -khtml-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
+
 .ProseMirror p {
     margin: 0;
     line-height: 1.35;

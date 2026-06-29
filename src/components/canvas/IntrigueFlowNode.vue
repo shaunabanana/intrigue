@@ -239,11 +239,7 @@ const backgroundColor = computed(() => colors[node.value.type][currentColor.valu
 const isNote = computed(() => node.value.type === NodeTypes.Note);
 const isReference = computed(() => node.value.type === NodeTypes.Reference);
 const isDraggingSelected = computed(() => dragging.value && selection.value.includes(props.id));
-const selectedByRemoteUsers = computed(() => Object.entries(intrigueDocument.users || {}).some(
-    ([userId, userData]) => userId !== intrigueDocument.userId
-        && Array.isArray(userData.selection)
-        && userData.selection.includes(props.id),
-));
+const selectedByRemoteUsers = computed(() => Boolean(props.data.remoteSelected));
 const showColorControls = computed(
     () => props.selected && colors[node.value.type] && selection.value.length === 1,
 );
@@ -381,8 +377,6 @@ function parseNoteContent(content) {
 }
 
 onMounted(() => {
-    localData.value.currentX = node.value.x || 0;
-    localData.value.currentY = node.value.y || 0;
     localData.value.currentWidth = node.value.w || 200;
     localData.value.currentHeight = node.value.h || nodeElement.value.clientHeight;
 
@@ -566,6 +560,7 @@ watch(() => node.value.w, () => {
     margin: -2px;
     border: 2px solid;
     border-color: gray !important;
+    cursor: default;
     pointer-events: none;
 }
 

@@ -7,14 +7,14 @@
             <a-col :span="8">
                 <a-button-group class="window-controls" style="margin-left: 5rem;">
                     <a-button type="text" size="mini"
-                        :disabled="!document.canUndo()"
+                        :disabled="!canUndo"
                         @click="document.undo()"
                     >
                         <template #icon><icon-undo /></template>
                     </a-button>
 
                     <a-button type="text" size="mini"
-                        :disabled="!document.canRedo()"
+                        :disabled="!canRedo"
                         @click="document.redo()"
                     >
                         <template #icon><icon-redo /></template>
@@ -40,14 +40,14 @@
             <a-col :span="8">
                 <a-button-group style="margin-left: 1rem;">
                     <a-button type="text" size="small"
-                        :disabled="!document.canUndo()"
+                        :disabled="!canUndo"
                         @click="document.undo()"
                     >
                         <template #icon><icon-undo /></template>
                     </a-button>
 
                     <a-button type="text" size="small"
-                        :disabled="!document.canRedo()"
+                        :disabled="!canRedo"
                         @click="document.redo()"
                     >
                         <template #icon><icon-redo /></template>
@@ -55,7 +55,7 @@
                 </a-button-group>
             </a-col>
             <a-col :span="8" align="center">
-                To save this document, bookmark this page or copy the share link →
+                To save this document, bookmark or copy the share link →
             </a-col>
             <a-col :span="8" align="right" style="padding-right: 0.5rem">
                 <CopyButton size="small" :text="shareLink">Share</CopyButton>
@@ -66,7 +66,7 @@
 
 <script setup>
 import {
-    computed, inject, onMounted, ref,
+    computed, inject, onBeforeUnmount, onMounted, ref,
 } from 'vue';
 import { IconRedo, IconUndo } from '@arco-design/web-vue/es/icon';
 import createDocumentShareLink from '@/config';
@@ -78,11 +78,22 @@ const filePath = inject('filePath');
 
 const electron = Boolean(window.intrigue?.isElectron);
 const newFile = ref(false);
+const canUndo = ref(document.canUndo());
+const canRedo = ref(document.canRedo());
+let cleanupHistoryListener = null;
 
 const fileName = computed(() => (filePath.value ? window.intrigue.basename(filePath.value) : 'Untitled'));
 const shareLink = computed(() => createDocumentShareLink(store.value.metadata.id));
 
+function updateHistoryState() {
+    canUndo.value = document.canUndo();
+    canRedo.value = document.canRedo();
+}
+
 onMounted(() => {
+    cleanupHistoryListener = document.on('history', updateHistoryState);
+    updateHistoryState();
+
     const queryString = window.location.search;
     const urlParams = new URLSearchParams(queryString);
     newFile.value = !urlParams.get('document');
@@ -94,6 +105,10 @@ onMounted(() => {
             window.history.replaceState(null, null, url);
         }
     });
+});
+
+onBeforeUnmount(() => {
+    if (cleanupHistoryListener) cleanupHistoryListener();
 });
 </script>
 

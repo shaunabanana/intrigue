@@ -31,8 +31,14 @@ export default class LocalFilePersistence extends EventEmitter {
                     this.saveToDisk();
                 } else {
                     this.readFile(this.filePath).then((data) => {
-                        applyUpdate(this.doc, Uint8Array.from(data));
-                        this.emit('synced');
+                        try {
+                            applyUpdate(this.doc, Uint8Array.from(data));
+                            this.emit('synced');
+                        } catch (error) {
+                            this.emit('save-error', error);
+                        }
+                    }).catch((error) => {
+                        this.emit('save-error', error);
                     });
                 }
             }).catch(() => {
@@ -64,8 +70,16 @@ export default class LocalFilePersistence extends EventEmitter {
             this.timeout = null;
         }
 
+        let update;
+        try {
+            update = encodeStateAsUpdate(this.doc);
+        } catch (error) {
+            this.emit('save-error', error);
+            return;
+        }
+
         this.emit('save');
-        this.writeFile(this.filePath, encodeStateAsUpdate(this.doc)).then(() => {
+        this.writeFile(this.filePath, update).then(() => {
             // if (callback) callback();
             this.emit('saved');
         }).catch((error) => {

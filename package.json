@@ -56,7 +56,10 @@
     "y-indexeddb": "^9.0.8",
     "y-webrtc": "^10.2.3",
     "yaml": "^2.1.1",
-    "yjs": "^13.5.39"
+    "yjs": "13.6.31"
+  },
+  "overrides": {
+    "yjs": "13.6.31"
   },
   "devDependencies": {
     "@babel/core": "^7.18.5",

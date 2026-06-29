@@ -49,6 +49,7 @@ export default class ReversibleDocument extends SyncedDocument {
         // console.log(`[Undo][Commit] ${JSON.stringify(this.undoStack, null, 2)}`);
 
         this.redoStack = [];
+        this.emit('history');
         this.emit('commit', action, params);
     }
 
@@ -85,6 +86,7 @@ export default class ReversibleDocument extends SyncedDocument {
         });
 
         toStack.push(toStackRecord.length === 1 ? toStackRecord[0] : toStackRecord);
+        this.emit('history');
     }
 
     undo() {

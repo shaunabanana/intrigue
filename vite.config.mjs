@@ -13,5 +13,6 @@ export default defineConfig({
         alias: {
             '@': src,
         },
+        dedupe: ['yjs', 'lib0'],
     },
 });

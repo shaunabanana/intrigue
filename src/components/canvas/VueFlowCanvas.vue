@@ -68,7 +68,7 @@
 
 <script setup>
 import {
-    computed, inject, markRaw, onBeforeUnmount, onMounted, provide, ref,
+    computed, inject, markRaw, onBeforeUnmount, onMounted, provide, ref, watch,
 } from 'vue';
 import {
     ConnectionMode, VueFlow, useVueFlow,
@@ -105,6 +105,8 @@ const selectionIds = ref([]);
 const selectedEdgeIds = ref([]);
 const dragStartPositions = ref({});
 const viewport = ref({ x: 0, y: 0, zoom: 1 });
+const awarenessNow = ref(Date.now());
+let awarenessClockInterval = null;
 const nodeTypes = {
     intrigue: markRaw(IntrigueFlowNode),
 };
@@ -113,6 +115,8 @@ const edgeTypes = {
 };
 const edgeColor = '#9A9A9B';
 const selectedEdgeColor = 'rgb(255, 112, 143)';
+const remoteSelectedEdgeColor = 'gray';
+const remoteSelectionTimeout = 8000;
 const platform = window.navigator.platform || window.navigator.userAgent || '';
 const isApplePlatform = /Mac|iPhone|iPad|iPod/.test(platform);
 const shortcutModifier = isApplePlatform ? '⌘' : 'Ctrl';
@@ -136,9 +140,38 @@ const {
 
 provide('selection', computed(() => selectionIds.value));
 
+function isActiveRemoteUser(userId, userData) {
+    if (userId === intrigueDocument.userId) return false;
+    if (typeof userData.lastSeen !== 'number') return false;
+    return awarenessNow.value - userData.lastSeen <= remoteSelectionTimeout;
+}
+
+const remoteSelectionIds = computed(() => new Set(
+    Object.entries(intrigueDocument.users || {}).flatMap(([userId, userData]) => {
+        if (!isActiveRemoteUser(userId, userData)) return [];
+        if (!Array.isArray(userData.selection)) return [];
+        return userData.selection;
+    }),
+));
+
+function isRemotelySelected(id) {
+    return remoteSelectionIds.value.has(id);
+}
+
+function hasRemoteSelection(ids) {
+    return ids.some((id) => isRemotelySelected(id));
+}
+
+function getEdgeColor(selected, remoteSelected) {
+    if (selected) return selectedEdgeColor;
+    if (remoteSelected) return remoteSelectedEdgeColor;
+    return edgeColor;
+}
+
 const flowEdges = computed(() => Object.values(store.value.links).map((link) => {
     const selected = selectedEdgeIds.value.includes(link.id);
-    const color = selected ? selectedEdgeColor : edgeColor;
+    const remoteSelected = isRemotelySelected(link.id);
+    const color = getEdgeColor(selected, remoteSelected);
     return {
         id: link.id,
         source: link.source,
@@ -146,17 +179,17 @@ const flowEdges = computed(() => Object.values(store.value.links).map((link) => 
         sourceHandle: link.sourceHandle || null,
         targetHandle: link.targetHandle || null,
         type: 'intrigue',
-        selectable: true,
+        selectable: !remoteSelected,
         selected,
         style: {
             stroke: color,
-            strokeWidth: 1.5,
+            strokeWidth: remoteSelected ? 2 : 1.5,
         },
     };
 }));
 
 const remoteUsers = computed(() => Object.values(intrigueDocument.users || {})
-    .filter((user) => intrigueDocument.localUser && intrigueDocument.localUser.id !== user.id)
+    .filter((user) => isActiveRemoteUser(user.id, user))
     .filter((user) => typeof user.cursorX === 'number' && typeof user.cursorY === 'number')
     .map((user) => {
         // Track viewport changes so cursor screen positions recompute after pan/zoom.
@@ -200,9 +233,11 @@ function getNodePosition(nodeId, visited = new Set()) {
 
     if (!node.parent || !store.value.nodes[node.parent]) {
         const localData = getNodeLocalData(nodeId);
+        const useLocalPosition = dragging.value
+            && (dragging.value === nodeId || selectionIds.value.includes(nodeId));
         return {
-            x: localData.currentX ?? node.x ?? 0,
-            y: localData.currentY ?? node.y ?? 0,
+            x: useLocalPosition ? localData.currentX ?? node.x ?? 0 : node.x ?? 0,
+            y: useLocalPosition ? localData.currentY ?? node.y ?? 0 : node.y ?? 0,
         };
     }
 
@@ -283,16 +318,20 @@ function updateDropTarget(activeNode, movingIds) {
 const flowNodes = computed(() => Object.values(store.value.nodes).map((node) => {
     const position = getNodePosition(node.id);
     const width = getNodeWidth(node.id);
+    const remoteSelected = isRemotelySelected(node.id);
 
     return {
         id: node.id,
         type: 'intrigue',
         position,
-        data: { node },
+        data: { node, remoteSelected },
         selected: selectionIds.value.includes(node.id),
-        draggable: editing.value !== node.id,
-        selectable: true,
-        connectable: true,
+        draggable: editing.value !== node.id && !remoteSelected,
+        selectable: !remoteSelected,
+        connectable: !remoteSelected,
+        class: {
+            'remote-selected-node': remoteSelected,
+        },
         style: {
             width: `${width}px`,
         },
@@ -366,17 +405,24 @@ const contextualHelp = computed(() => {
 });
 
 function setSelection(ids) {
-    if (ids.length > 0) selectedEdgeIds.value = [];
-    selectionIds.value = ids;
-    intrigueDocument.updateAwareness('selection', ids);
+    const selectableIds = ids.filter((id) => !isRemotelySelected(id));
+    if (selectableIds.length > 0) selectedEdgeIds.value = [];
+    selectionIds.value = selectableIds;
+    intrigueDocument.updateAwareness('selection', [...selectionIds.value, ...selectedEdgeIds.value]);
     send({
         type: 'update selection',
-        selection: ids,
+        selection: selectableIds,
     });
     send({
         type: 'done selecting',
-        selection: ids,
+        selection: selectableIds,
     });
+}
+
+function setEdgeSelection(ids) {
+    const selectableIds = ids.filter((id) => !isRemotelySelected(id));
+    selectedEdgeIds.value = selectableIds;
+    intrigueDocument.updateAwareness('selection', [...selectionIds.value, ...selectedEdgeIds.value]);
 }
 
 function newNode(event) {
@@ -412,11 +458,12 @@ function onCanvasDoubleClick(event) {
 function onPaneClick() {
     if (!editing.value) {
         setSelection([]);
-        selectedEdgeIds.value = [];
+        setEdgeSelection([]);
     }
 }
 
 function doubleClickNode({ node }) {
+    if (isRemotelySelected(node.id)) return;
     send({
         type: 'dblclick node',
         node: node.id,
@@ -429,6 +476,7 @@ function onNodesChange(changes) {
 
     const nextSelection = new Set(selectionIds.value);
     selectionChanges.forEach((change) => {
+        if (change.selected && isRemotelySelected(change.id)) return;
         if (change.selected) nextSelection.add(change.id);
         else nextSelection.delete(change.id);
     });
@@ -441,10 +489,11 @@ function onEdgesChange(changes) {
 
     const nextSelection = new Set(selectedEdgeIds.value);
     selectionChanges.forEach((change) => {
+        if (change.selected && isRemotelySelected(change.id)) return;
         if (change.selected) nextSelection.add(change.id);
         else nextSelection.delete(change.id);
     });
-    selectedEdgeIds.value = [...nextSelection];
+    setEdgeSelection([...nextSelection]);
     if (selectedEdgeIds.value.length > 0 && selectionIds.value.length > 0) {
         setSelection([]);
     }
@@ -471,6 +520,7 @@ function clearLocalDragPositions(ids) {
 
 function onNodeDragStart(event) {
     const ids = getDragIds(event);
+    if (hasRemoteSelection(ids)) return;
     const positions = {};
     ids.forEach((id) => {
         positions[id] = getNodePosition(id);
@@ -486,6 +536,7 @@ function onNodeDragStart(event) {
 
 function onNodeDrag(event) {
     const ids = getDragIds(event);
+    if (hasRemoteSelection(ids)) return;
     const eventNodes = getEventNodes(event);
     eventNodes.forEach((node) => {
         const item = store.value.nodes[node.id];
@@ -532,6 +583,12 @@ function onNodeDrag(event) {
 
 function onNodeDragStop(event) {
     const ids = getDragIds(event);
+    if (hasRemoteSelection(ids)) {
+        clearLocalDragPositions(ids);
+        dragStartPositions.value = {};
+        send('stop dragging');
+        return;
+    }
     const eventNodes = getEventNodes(event);
     const updates = {};
     const updateIds = [];
@@ -596,6 +653,7 @@ function onConnect(connection) {
         source, target, sourceHandle, targetHandle,
     } = connection;
     if (!source || !target || source === target) return;
+    if (isRemotelySelected(source) || isRemotelySelected(target)) return;
 
     const existingLinkId = Object.keys(store.value.links).find((linkId) => {
         const link = store.value.links[linkId];
@@ -605,6 +663,7 @@ function onConnect(connection) {
             && (link.targetHandle || null) === (targetHandle || null);
     });
     if (existingLinkId) {
+        if (isRemotelySelected(existingLinkId)) return;
         intrigueDocument.commit('removeLink', existingLinkId);
     } else {
         intrigueDocument.commit('createLink', {
@@ -622,7 +681,7 @@ function deleteSelection(event) {
     const selectedIds = [...selectionIds.value];
     const selectedLinks = [...selectedEdgeIds.value];
     setSelection([]);
-    selectedEdgeIds.value = [];
+    setEdgeSelection([]);
     selectedLinks.forEach((linkId) => {
         if (store.value.links[linkId]) intrigueDocument.commit('removeLink', linkId);
     });
@@ -668,8 +727,13 @@ function updateCursorPosition(event) {
         x: event.clientX,
         y: event.clientY,
     });
+    intrigueDocument.updateAwareness('lastSeen', Date.now());
     intrigueDocument.updateAwareness('cursorX', position.x);
     intrigueDocument.updateAwareness('cursorY', position.y);
+}
+
+function clearAwarenessSelection() {
+    intrigueDocument.updateAwareness('selection', []);
 }
 
 onViewportChange((newViewport) => {
@@ -686,9 +750,37 @@ onMounted(() => {
     intrigueDocument.on('synced', () => {
         setSelection([]);
     });
+
+    awarenessClockInterval = setInterval(() => {
+        awarenessNow.value = Date.now();
+    }, 1000);
+    window.addEventListener('beforeunload', clearAwarenessSelection);
+});
+
+watch(remoteSelectionIds, () => {
+    const nextSelectionIds = selectionIds.value.filter((id) => !isRemotelySelected(id));
+    const nextSelectedEdgeIds = selectedEdgeIds.value.filter((id) => !isRemotelySelected(id));
+
+    if (
+        nextSelectionIds.length !== selectionIds.value.length
+        || nextSelectedEdgeIds.length !== selectedEdgeIds.value.length
+    ) {
+        selectionIds.value = nextSelectionIds;
+        selectedEdgeIds.value = nextSelectedEdgeIds;
+        intrigueDocument.updateAwareness('selection', [
+            ...selectionIds.value,
+            ...selectedEdgeIds.value,
+        ]);
+    }
 });
 
 onBeforeUnmount(() => {
+    clearAwarenessSelection();
+    if (awarenessClockInterval) {
+        clearInterval(awarenessClockInterval);
+        awarenessClockInterval = null;
+    }
+    window.removeEventListener('beforeunload', clearAwarenessSelection);
     keyboard.removeListeners();
 });
 </script>
@@ -699,18 +791,34 @@ onBeforeUnmount(() => {
     inset: 0;
     width: 100vw;
     height: 100vh;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -khtml-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
 }
 
 .vue-flow-canvas {
     width: 100vw;
     height: 100vh;
     background: transparent;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -khtml-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
 }
 
 .vue-flow-canvas .vue-flow__node-intrigue {
     border: 0;
     background: transparent;
     box-shadow: none;
+}
+
+.vue-flow-canvas .vue-flow__node.remote-selected-node {
+    cursor: default;
 }
 
 .vue-flow-canvas .vue-flow__nodesselection-rect {

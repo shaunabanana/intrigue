@@ -12,6 +12,7 @@ export default defineConfig({
             alias: {
                 '@': src,
             },
+            dedupe: ['yjs', 'lib0'],
         },
         build: {
             rollupOptions: {
@@ -34,6 +35,7 @@ export default defineConfig({
             alias: {
                 '@': src,
             },
+            dedupe: ['yjs', 'lib0'],
         },
         build: {
             rollupOptions: {

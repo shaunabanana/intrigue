@@ -11,6 +11,12 @@ import NodeTypes from './types';
 
 const CURRENT_DOCUMENT_VERSION = packageInfo.version;
 const VALID_LINK_HANDLES = ['top', 'right', 'bottom', 'left'];
+const NODE_RELATION_FIELDS = new Set(['links', 'children', 'parent']);
+
+function clonePlain(value) {
+    if (value === undefined || value === null || typeof value !== 'object') return value;
+    return JSON.parse(JSON.stringify(value));
+}
 
 function isValidLinkHandle(handle) {
     return VALID_LINK_HANDLES.includes(handle);
@@ -61,10 +67,10 @@ export default class IntrigueDocument extends ReversibleDocument {
     }
 
     initSync(documentId) {
-        super.initSync(documentId);
         if (!this.store.metadata.version) {
             this.store.metadata.version = CURRENT_DOCUMENT_VERSION;
         }
+        super.initSync(documentId);
     }
 
     getMigrationNodeHeight(nodeId, visited = new Set()) {
@@ -180,27 +186,39 @@ export default class IntrigueDocument extends ReversibleDocument {
     // Note: each function below should return its inverse parameters
     createNode(nodeItem, state) {
         state = state || this.store;
-        const nodeId = nodeItem.id ? nodeItem.id : nanoid();
+        const item = clonePlain(nodeItem);
+        const nodeId = item.id ? item.id : nanoid();
         const node = {
             id: nodeId,
-            type: nodeItem.type,
-            content: nodeItem.content,
+            type: item.type,
+            content: item.content,
             links: [],
             parent: null,
             children: [],
             identifier: null,
             literature: null,
-            x: nodeItem.x ? nodeItem.x : 0,
-            y: nodeItem.y ? nodeItem.y : 0,
-            w: nodeItem.w ? nodeItem.w : 200,
+            x: item.x ? item.x : 0,
+            y: item.y ? item.y : 0,
+            w: item.w ? item.w : 200,
         };
-        if (nodeItem.links) {
-            nodeItem.links.forEach((link) => this.createLink(link, state));
-        }
-        if (nodeItem.children) {
-            nodeItem.children.forEach((child) => this.snapNode(child, state));
-        }
+
+        Object.entries(item).forEach(([key, value]) => {
+            if (NODE_RELATION_FIELDS.has(key) || value === undefined) return;
+            node[key] = clonePlain(value);
+        });
+
+        node.id = nodeId;
+        node.links = [];
+        node.parent = null;
+        node.children = [];
         state.nodes[nodeId] = node;
+
+        if (item.links) {
+            item.links.forEach((link) => this.createLink(clonePlain(link), state));
+        }
+        if (item.children) {
+            item.children.forEach((child) => this.snapNode(clonePlain(child), state));
+        }
         return nodeId;
     }
 
@@ -210,20 +228,21 @@ export default class IntrigueDocument extends ReversibleDocument {
         const newLinks = [];
         const newChildren = [];
         nodeItems.forEach((item) => {
+            const nodeItem = clonePlain(item);
             // Extract all links to be created.
             // This is to delay link creation until all nodes are first created.
-            if (item.links) {
-                item.links.forEach((link) => newLinks.push(link));
-                delete item.links;
+            if (nodeItem.links) {
+                nodeItem.links.forEach((link) => newLinks.push(clonePlain(link)));
+                delete nodeItem.links;
             }
             // Extract all children to be snapped.
             // Same as above.
-            if (item.children) {
-                item.children.forEach((child) => newChildren.push(child));
-                delete item.children;
+            if (nodeItem.children) {
+                nodeItem.children.forEach((child) => newChildren.push(clonePlain(child)));
+                delete nodeItem.children;
             }
 
-            const nodeId = this.createNode(item, state);
+            const nodeId = this.createNode(nodeItem, state);
             nodeIds.push(nodeId);
         });
 
@@ -236,7 +255,7 @@ export default class IntrigueDocument extends ReversibleDocument {
 
     deleteNode(nodeId, state) {
         state = state || this.store;
-        const node = { ...state.nodes[nodeId] };
+        const node = clonePlain(state.nodes[nodeId]);
         const removedLinks = [];
         const unsnappedChildren = [];
         node.links.forEach((linkId) => {
@@ -282,15 +301,15 @@ export default class IntrigueDocument extends ReversibleDocument {
                     return;
                 }
                 propByPath(node, path, originalValue + value);
-                inverseParams.by[path] = -originalValue;
+                inverseParams.by[path] = -value;
             });
         }
         // Set parameters to values
         if (update.set) {
             inverseParams.set = {};
             Object.entries(update.set).forEach(([path, value]) => {
-                const originalValue = propByPath(node, path);
-                propByPath(node, path, value);
+                const originalValue = clonePlain(propByPath(node, path));
+                propByPath(node, path, clonePlain(value));
                 inverseParams.set[path] = originalValue;
             });
         }
@@ -322,11 +341,11 @@ export default class IntrigueDocument extends ReversibleDocument {
                 inverseParams.set[nodeId] = {};
                 const node = state.nodes[nodeId];
                 Object.keys(update.set[nodeId]).forEach((path) => {
-                    inverseParams.set[nodeId][path] = propByPath(node, path);
+                    inverseParams.set[nodeId][path] = clonePlain(propByPath(node, path));
                 });
                 this.updateNode({
                     id: nodeId,
-                    set: update.set[nodeId],
+                    set: clonePlain(update.set[nodeId]),
                 }, state);
             });
         }
@@ -344,9 +363,7 @@ export default class IntrigueDocument extends ReversibleDocument {
 
         // Areas can have multiple children
         if (parent.type === NodeTypes.Area) {
-            parent.children.push(nodes.target);
-            // Remove potential duplicates
-            parent.children.filter((item, i) => parent.children.indexOf(item) === i);
+            if (!parent.children.includes(nodes.target)) parent.children.push(nodes.target);
             child.parent = parent.id;
 
             inverseParams.source = nodes.source;
@@ -354,9 +371,7 @@ export default class IntrigueDocument extends ReversibleDocument {
 
             // Other nodes may only have one child.
         } else if (parent.children.length === 0) {
-            parent.children.push(nodes.target);
-            // Remove potential duplicates
-            parent.children.filter((item, i) => parent.children.indexOf(item) === i);
+            if (!parent.children.includes(nodes.target)) parent.children.push(nodes.target);
             child.parent = parent.id;
 
             inverseParams.source = nodes.source;
@@ -385,30 +400,29 @@ export default class IntrigueDocument extends ReversibleDocument {
 
     createLink(params, state) {
         state = state || this.store;
-        const source = state.nodes[params.source];
-        const target = state.nodes[params.target];
+        const linkParams = clonePlain(params);
+        const source = state.nodes[linkParams.source];
+        const target = state.nodes[linkParams.target];
 
-        const linkId = params.id ? params.id : nanoid();
+        const linkId = linkParams.id ? linkParams.id : nanoid();
         const link = {
             id: linkId,
-            source: params.source,
-            target: params.target,
-            sourceHandle: params.sourceHandle || null,
-            targetHandle: params.targetHandle || null,
+            source: linkParams.source,
+            target: linkParams.target,
+            sourceHandle: linkParams.sourceHandle || null,
+            targetHandle: linkParams.targetHandle || null,
         };
         state.links[linkId] = link;
 
-        source.links.push(linkId);
-        source.links.filter((item, i) => source.links.indexOf(item) === i);
-        target.links.push(linkId);
-        target.links.filter((item, i) => target.links.indexOf(item) === i);
+        if (!source.links.includes(linkId)) source.links.push(linkId);
+        if (!target.links.includes(linkId)) target.links.push(linkId);
 
         return linkId;
     }
 
     removeLink(linkId, state) {
         state = state || this.store;
-        const link = { ...state.links[linkId] };
+        const link = clonePlain(state.links[linkId]);
         const source = state.nodes[link.source];
         const target = state.nodes[link.target];
 
