@@ -28,6 +28,7 @@ export default defineConfig({
     },
     renderer: {
         root,
+        base: './',
         plugins: [vue()],
         resolve: {
             alias: {

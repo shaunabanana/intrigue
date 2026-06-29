@@ -31,7 +31,7 @@ export default class SyncedDocument extends EventEmitter {
         // this.store.metadata.id = this.store.metadata.id;
 
         const doc = getYjsValue(this.store);
-        this.syncProvider = new WebrtcProvider(this.store.metadata.id, doc);
+        this.syncProvider = new WebrtcProvider(this.store.metadata.id, doc, { signaling: ['wss://signal.shengchen.io'] });
         console.log('[Sync][initSync].');
         this.syncProvider.awareness.on('change', this.handleChanges.bind(this));
 

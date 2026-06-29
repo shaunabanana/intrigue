@@ -30,10 +30,17 @@ Features include:
 * _COMING SOON: Import BibTeX files exported from a literature search or other tools like Zotero._
 * _COMING SOON: Export papers into a BibTeX to directly use in your paper-writing process._
 
-### Compiles and minifies for production
+### Build Electron app
 ```
 npm run build
 ```
+
+### Build web interface
+```
+npm run web:build
+```
+
+Set `VITE_WEB_BASE_URL` to control generated share links in both Electron and web builds.
 
 ### Lints and fixes files
 ```

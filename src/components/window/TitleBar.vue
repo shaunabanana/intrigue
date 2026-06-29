@@ -69,6 +69,7 @@ import {
     computed, inject, onMounted, ref,
 } from 'vue';
 import { IconRedo, IconUndo } from '@arco-design/web-vue/es/icon';
+import createDocumentShareLink from '@/config';
 import CopyButton from './CopyButton.vue';
 
 const store = inject('store');
@@ -79,7 +80,7 @@ const electron = Boolean(window.intrigue?.isElectron);
 const newFile = ref(false);
 
 const fileName = computed(() => (filePath.value ? window.intrigue.basename(filePath.value) : 'Untitled'));
-const shareLink = computed(() => `https://intrigue-app.github.io/?document=${store.value.metadata.id}`);
+const shareLink = computed(() => createDocumentShareLink(store.value.metadata.id));
 
 onMounted(() => {
     const queryString = window.location.search;
