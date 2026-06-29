@@ -244,7 +244,9 @@ const selectedByRemoteUsers = computed(() => Object.entries(intrigueDocument.use
         && Array.isArray(userData.selection)
         && userData.selection.includes(props.id),
 ));
-const showColorControls = computed(() => props.selected && colors[node.value.type]);
+const showColorControls = computed(
+    () => props.selected && colors[node.value.type] && selection.value.length === 1,
+);
 const shouldResize = computed(() => props.selected && !node.value.parent);
 const toolbarPosition = computed(() => {
     if (node.value.parent && (node.value.children || []).length > 0) return Position.Left;
