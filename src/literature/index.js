@@ -3,6 +3,7 @@ import * as linkify from 'linkifyjs';
 import doi from 'identifiers-doi';
 import Cite from 'citation-js';
 import axios from 'axios';
+import { fetch } from 'fetch-opengraph';
 
 export function extractIsbn(subject) {
     // Checks for ISBN-10 or ISBN-13 format
@@ -108,13 +109,12 @@ export function fetchLiteratureInfo(type, identifier) {
     console.log(`[Literature][fetchLiteratureInfo] type: ${type}, identifier: ${identifier}`);
     return new Promise((resolve, reject) => {
         if (type === 'url') {
-            axios.get(identifier).then((data) => {
-                // console.log(data.request);
-                const matches = data.data.match(/<title>(.*?)<\/title>/);
+            fetch(identifier).then((data) => {
+                console.log(data);
                 resolve({
-                    title: matches[1],
+                    title: data.title || 'Untitled',
                     author: [{ family: 'Web link' }],
-                    identifier: data.request.responseURL,
+                    identifier: data.url,
                 });
             }).catch((err) => {
                 reject(err);

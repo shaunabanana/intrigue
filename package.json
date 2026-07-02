@@ -44,6 +44,7 @@
     "core-js": "^3.23.1",
     "electron-is": "^3.0.0",
     "electron-log": "^4.4.8",
+    "fetch-opengraph": "^1.0.37",
     "identifiers-doi": "^0.2.1",
     "is-electron": "^2.2.1",
     "linkifyjs": "^4.0.2",
