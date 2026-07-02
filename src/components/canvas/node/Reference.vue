@@ -46,14 +46,17 @@ function showFullText() {
 <style scoped>
 .title {
     font-weight: bold;
+    color: black;
 }
 
 .authors {
     font-weight: normal;
+    color: black;
 }
 
 .identifier {
     font-weight: normal;
     font-style: italic;
+    color: var(--node-stroke);
 }
 </style>
