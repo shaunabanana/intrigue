@@ -84,7 +84,7 @@ export function extractIdentifier(content) {
 
     // Check Zotero URL
     const zotero = linkify.find(content, 'url').filter(
-        (item) => item.startsWith('zotero://'),
+        (item) => item.value.startsWith('zotero://'),
     );
     if (zotero.length === 1 && zotero[0].value === content.trim()) {
         return {
@@ -122,7 +122,7 @@ export function fetchLiteratureInfo(type, identifier) {
         } else {
             // Handles both BibTex and DOIs.
             // eslint-disable-next-line no-new, new-cap
-            new Cite.async(identifier, (data) => {
+            Cite.async(identifier, (data) => {
                 const info = data.data[0];
                 // eslint-disable-next-line no-underscore-dangle
                 delete info._graph;
