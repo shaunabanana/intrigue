@@ -258,6 +258,7 @@ export default class IntrigueDocument extends ReversibleDocument {
         const node = clonePlain(state.nodes[nodeId]);
         const removedLinks = [];
         const unsnappedChildren = [];
+
         node.links.forEach((linkId) => {
             removedLinks.push(this.removeLink(linkId, state));
         });
@@ -271,6 +272,12 @@ export default class IntrigueDocument extends ReversibleDocument {
         });
         node.links = removedLinks;
         node.children = unsnappedChildren;
+
+        this.unsnapNode({
+            source: node.parent,
+            target: node.id,
+        }, state);
+
         delete state.nodes[nodeId];
         return node;
     }
