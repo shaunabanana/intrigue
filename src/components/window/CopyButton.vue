@@ -4,10 +4,11 @@
         :shape="shape"
         :size="size"
         :status="status"
-        :disabled="copied"
+        :disabled="disabled || copied || copying"
         @click="copy"
     >
-        <slot v-if="!copied"/>
+        <slot v-if="!copied && !copying"/>
+        <span v-else-if="copying">Copying...</span>
         <span v-else>Copied!</span>
     </a-button>
 </template>
@@ -23,13 +24,26 @@ const props = defineProps({
     type: String,
     status: String,
     text: String,
+    getText: Function,
+    disabled: Boolean,
 });
 
 const copied = ref(false);
+const copying = ref(false);
 let timer = null;
 
-function copy() {
-    if (ultralightCopy(props.text)) {
+async function copy() {
+    copying.value = true;
+    let text;
+    try {
+        text = props.getText ? await props.getText() : props.text;
+    } catch (error) {
+        Message.error(error.message || 'Error creating share link!');
+        copying.value = false;
+        return;
+    }
+
+    if (ultralightCopy(text)) {
         copied.value = true;
         if (timer) clearTimeout(timer);
         timer = setTimeout(() => {
@@ -38,6 +52,7 @@ function copy() {
     } else {
         Message.error('Error copying to clipboard!');
     }
+    copying.value = false;
 }
 
 onBeforeUnmount(() => {

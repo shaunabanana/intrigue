@@ -3,6 +3,7 @@ import {
     BrowserWindow, ipcMain, app,
 } from 'electron';
 import { access, readFile, writeFile } from 'fs/promises';
+import { windowManager } from './window';
 
 ipcMain.on('set-edited', (_, value) => {
     const window = BrowserWindow.getFocusedWindow();
@@ -12,6 +13,13 @@ ipcMain.on('set-edited', (_, value) => {
 ipcMain.handle('get-version', () => app.getVersion());
 
 ipcMain.handle('get-packaged', () => app.isPackaged);
+
+ipcMain.on('document-identity', (event, identity) => {
+    const window = BrowserWindow.fromWebContents(event.sender);
+    if (window) windowManager.setDocumentIdentity(window, identity);
+});
+
+ipcMain.handle('open-url', async (_, url) => windowManager.openUrl(url));
 
 ipcMain.handle('file:access', async (_, filePath) => {
     await access(filePath);

@@ -2,7 +2,6 @@ import * as linkify from 'linkifyjs';
 
 import doi from 'identifiers-doi';
 import Cite from 'citation-js';
-import axios from 'axios';
 import { fetch } from 'fetch-opengraph';
 
 export function extractIsbn(subject) {

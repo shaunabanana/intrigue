@@ -17,6 +17,12 @@ contextBridge.exposeInMainWorld('intrigue', {
     setEdited(value) {
         ipcRenderer.send('set-edited', value);
     },
+    setDocumentIdentity(identity) {
+        ipcRenderer.send('document-identity', identity);
+    },
+    openUrl(url) {
+        return ipcRenderer.invoke('open-url', url);
+    },
     getVersion() {
         return ipcRenderer.invoke('get-version');
     },
@@ -31,6 +37,12 @@ contextBridge.exposeInMainWorld('intrigue', {
     },
     onSaveFile(callback) {
         return on('save-file', callback);
+    },
+    onOpenRemoteDocument(callback) {
+        return on('open-remote-document', callback);
+    },
+    onOpenSelection(callback) {
+        return on('open-selection', callback);
     },
     files: {
         access(filePath) {

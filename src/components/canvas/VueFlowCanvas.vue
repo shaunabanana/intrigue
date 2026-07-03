@@ -72,6 +72,7 @@
 import {
     computed, inject, markRaw, onBeforeUnmount, onMounted, provide, ref, watch,
 } from 'vue';
+import Message from '@arco-design/web-vue/es/message';
 import {
     ConnectionMode, VueFlow, useVueFlow,
 } from '@vue-flow/core';
@@ -101,6 +102,8 @@ const dragging = inject('dragging');
 const dropping = inject('dropping');
 const detaching = inject('detaching');
 const panning = inject('panning');
+const setSelectedElementIds = inject('setSelectedElementIds');
+const openSelectionTarget = inject('openSelectionTarget');
 
 const keyboard = new Keyboard();
 const selectionIds = ref([]);
@@ -109,6 +112,7 @@ const dragStartPositions = ref({});
 const viewport = ref({ x: 0, y: 0, zoom: 1 });
 const awarenessNow = ref(Date.now());
 let awarenessClockInterval = null;
+let openSelectionRetryTimer = null;
 const nodeTypes = {
     intrigue: markRaw(IntrigueFlowNode),
 };
@@ -135,6 +139,7 @@ const defaultEdgeOptions = {
 const {
     screenToFlowCoordinate,
     flowToScreenCoordinate,
+    fitView,
     getIntersectingNodes,
     onViewportChange,
     updateNode,
@@ -410,6 +415,9 @@ function setSelection(ids) {
     const selectableIds = ids.filter((id) => !isRemotelySelected(id));
     if (selectableIds.length > 0) selectedEdgeIds.value = [];
     selectionIds.value = selectableIds;
+    if (setSelectedElementIds) {
+        setSelectedElementIds([...selectionIds.value, ...selectedEdgeIds.value]);
+    }
     intrigueDocument.updateAwareness('selection', [...selectionIds.value, ...selectedEdgeIds.value]);
     send({
         type: 'update selection',
@@ -424,7 +432,88 @@ function setSelection(ids) {
 function setEdgeSelection(ids) {
     const selectableIds = ids.filter((id) => !isRemotelySelected(id));
     selectedEdgeIds.value = selectableIds;
+    if (setSelectedElementIds) {
+        setSelectedElementIds([...selectionIds.value, ...selectedEdgeIds.value]);
+    }
     intrigueDocument.updateAwareness('selection', [...selectionIds.value, ...selectedEdgeIds.value]);
+}
+
+function getShareAnchorSelection(shareId) {
+    const anchor = store.value.metadata.shareAnchors?.[shareId];
+    if (!anchor || !Array.isArray(anchor.selection)) return null;
+    return anchor.selection;
+}
+
+function resolveOpenSelectionTarget(target) {
+    if (target.shareId) {
+        const sharedSelection = getShareAnchorSelection(target.shareId);
+        if (sharedSelection) return sharedSelection;
+        if (!target.selectionIds?.length) return null;
+    }
+    return target.selectionIds || [];
+}
+
+function focusSelection(nodeIds, edgeIds) {
+    const edgeNodeIds = edgeIds.flatMap((edgeId) => {
+        const edge = store.value.links[edgeId];
+        return edge ? [edge.source, edge.target] : [];
+    });
+    const fitNodeIds = [...new Set([...nodeIds, ...edgeNodeIds])]
+        .filter((id) => store.value.nodes[id]);
+    if (fitNodeIds.length === 0) return;
+
+    try {
+        fitView({
+            nodes: fitNodeIds,
+            padding: 0.35,
+            duration: 300,
+        });
+    } catch (error) {
+        console.warn('[VueFlowCanvas][focusSelection] Failed to fit selection.', error);
+    }
+}
+
+function applyOpenSelectionTarget(target) {
+    const targetIds = resolveOpenSelectionTarget(target);
+    if (targetIds === null) return false;
+    if (targetIds.length === 0) return true;
+
+    const nodeIds = targetIds.filter((id) => store.value.nodes[id]);
+    const edgeIds = targetIds.filter((id) => store.value.links[id]);
+    if (nodeIds.length === 0 && edgeIds.length === 0) return false;
+
+    setSelection(nodeIds);
+    setEdgeSelection(edgeIds);
+    focusSelection(nodeIds, edgeIds);
+    return true;
+}
+
+function scheduleOpenSelectionTarget(target) {
+    if (!target) return;
+    if (openSelectionRetryTimer) clearInterval(openSelectionRetryTimer);
+
+    let attempts = 0;
+    let applied = false;
+    const maxAttempts = 20;
+    const tryApply = () => {
+        attempts += 1;
+        if (applyOpenSelectionTarget(target)) {
+            applied = true;
+            clearInterval(openSelectionRetryTimer);
+            openSelectionRetryTimer = null;
+            return;
+        }
+
+        if (attempts >= maxAttempts) {
+            clearInterval(openSelectionRetryTimer);
+            openSelectionRetryTimer = null;
+            Message.warning('The shared selection is not available yet or no longer exists.');
+        }
+    };
+
+    tryApply();
+    if (applied) return;
+    openSelectionRetryTimer = setInterval(tryApply, 250);
 }
 
 function newNode(event) {
@@ -769,6 +858,9 @@ watch(remoteSelectionIds, () => {
     ) {
         selectionIds.value = nextSelectionIds;
         selectedEdgeIds.value = nextSelectedEdgeIds;
+        if (setSelectedElementIds) {
+            setSelectedElementIds([...selectionIds.value, ...selectedEdgeIds.value]);
+        }
         intrigueDocument.updateAwareness('selection', [
             ...selectionIds.value,
             ...selectedEdgeIds.value,
@@ -776,8 +868,17 @@ watch(remoteSelectionIds, () => {
     }
 });
 
+watch(openSelectionTarget, (target) => {
+    scheduleOpenSelectionTarget(target);
+});
+
 onBeforeUnmount(() => {
     clearAwarenessSelection();
+    if (setSelectedElementIds) setSelectedElementIds([]);
+    if (openSelectionRetryTimer) {
+        clearInterval(openSelectionRetryTimer);
+        openSelectionRetryTimer = null;
+    }
     if (awarenessClockInterval) {
         clearInterval(awarenessClockInterval);
         awarenessClockInterval = null;

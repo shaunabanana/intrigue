@@ -2,6 +2,10 @@
     <TitleBar />
     <DocumentCanvas />
     <Debug v-if="debug"/>
+    <div v-if="appState.loading" class="loading-overlay">
+        <a-spin :size="36" />
+        <div class="loading-text">Opening document...</div>
+    </div>
 </template>
 
 <script setup>
@@ -19,6 +23,7 @@ import intrigueMachine from '@/state';
 import { useMachine } from '@xstate/vue';
 
 import tutorialData from '@/utils/tutorial';
+import { parseIntrigueUrl } from '@/utils/links';
 
 import TitleBar from '@/components/window/TitleBar.vue';
 import DocumentCanvas from '@/components/canvas/VueFlowCanvas.vue';
@@ -34,6 +39,8 @@ const appState = reactive({
 });
 const debug = ref(false);
 const filePath = ref(undefined);
+const selectedElementIds = ref([]);
+const openSelectionTarget = ref(null);
 const { state, send } = useMachine(intrigueMachine);
 const electron = Boolean(window.intrigue?.isElectron);
 const electronListenerCleanup = [];
@@ -43,6 +50,11 @@ provide('store', store);
 provide('state', computed(() => state.value));
 provide('send', send);
 provide('filePath', computed(() => filePath.value));
+provide('selectedElementIds', computed(() => selectedElementIds.value));
+provide('setSelectedElementIds', (ids) => {
+    selectedElementIds.value = ids;
+});
+provide('openSelectionTarget', computed(() => openSelectionTarget.value));
 
 Object.keys(state.value.context).forEach((key) => {
     provide(key, computed(() => state.value.context[key]));
@@ -64,10 +76,36 @@ function setDocumentEdited(value) {
     window.intrigue.setEdited(value);
 }
 
+function reportDocumentIdentity() {
+    if (!electron || !store.value.metadata.id) return;
+    window.intrigue.setDocumentIdentity({
+        documentId: store.value.metadata.id,
+        filePath: filePath.value || null,
+    });
+}
+
+function setOpenSelectionTarget(target) {
+    if (!target?.shareId && !(target?.selectionIds?.length > 0)) return;
+    openSelectionTarget.value = {
+        shareId: target.shareId,
+        selectionIds: target.selectionIds || [],
+        nonce: Date.now(),
+    };
+}
+
+function startLoading() {
+    appState.loading = true;
+}
+
+function stopLoading() {
+    appState.loading = false;
+}
+
 onMounted(() => {
     intrigueDocument.on('synced', () => {
         broadcastUsername();
-        appState.loading = false;
+        stopLoading();
+        reportDocumentIdentity();
     });
 
     intrigueDocument.on('commit', () => {
@@ -106,11 +144,15 @@ onMounted(() => {
 
         electronListenerCleanup.push(window.intrigue.onNewFile(() => {
             console.log('[App][new-file] This is a new empty file.');
+            startLoading();
             intrigueDocument.initSync();
+            reportDocumentIdentity();
+            stopLoading();
         }));
 
         electronListenerCleanup.push(window.intrigue.onSetFilePath((newFilePath, overwrite) => {
             console.log(`[App][set-filepath] filePath is ${newFilePath}.`);
+            startLoading();
             filePath.value = newFilePath;
             intrigueDocument.initPersistence(newFilePath, overwrite);
         }));
@@ -119,9 +161,23 @@ onMounted(() => {
             console.log('[App][save-file] Manual save to disk.');
             intrigueDocument.saveToDisk();
         }));
+
+        electronListenerCleanup.push(window.intrigue.onOpenRemoteDocument((target) => {
+            console.log(`[App][open-remote-document] documentId is ${target.documentId}.`);
+            startLoading();
+            intrigueDocument.initSync(target.documentId);
+            reportDocumentIdentity();
+            setOpenSelectionTarget(target);
+            stopLoading();
+        }));
+
+        electronListenerCleanup.push(window.intrigue.onOpenSelection((target) => {
+            setOpenSelectionTarget(target);
+        }));
     } else {
         const queryString = window.location.search;
         const urlParams = new URLSearchParams(queryString);
+        const parsedUrl = parseIntrigueUrl(window.location.href);
         const documentId = urlParams.get('document');
         console.log(`[App][mounted] urlParams.document is ${documentId}`);
 
@@ -135,9 +191,11 @@ onMounted(() => {
                 store.value.links[linkId] = tutorialData.links[linkId];
             });
             intrigueDocument.initSync(documentId);
+            stopLoading();
         } else {
             intrigueDocument.initPersistence(documentId);
         }
+        if (parsedUrl.valid) setOpenSelectionTarget(parsedUrl);
     }
 });
 
@@ -168,12 +226,37 @@ html,
 body,
 #app {
     --background: #F8F9F9;
+    --highlight-border: rgb(255, 112, 143);
     width: 100%;
     height: 100%;
     overflow: hidden;
     font-family: 'Atkinson Hyperlegible', system-ui, -apple-system, BlinkMacSystemFont,
         'Segoe UI', sans-serif;
     background: var(--background);
+}
+
+.loading-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 20000;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 0.75rem;
+    color: var(--highlight-border);
+    background: rgba(248, 249, 249, 0.86);
+    backdrop-filter: blur(6px);
+}
+
+.loading-overlay .arco-spin-icon,
+.loading-overlay .arco-spin-tip {
+    color: var(--highlight-border);
+}
+
+.loading-text {
+    color: rgba(60, 65, 70, 0.72);
+    font-size: 0.86rem;
 }
 
 .noselect {

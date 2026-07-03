@@ -22,13 +22,57 @@ if (app.isPackaged) {
 }
 // parameters is now an array containing any files/folders
 // that your OS will pass to your application
-const filesToOpen = process.argv.slice(2);
+const filesToOpen = [];
+const urlsToOpen = [];
+
+function isOpenUrlArgument(value) {
+    return typeof value === 'string'
+        && (/^intrigue:\/\//.test(value) || /^https?:\/\//.test(value));
+}
+
+function collectLaunchArguments(args) {
+    args.forEach((arg) => {
+        if (isOpenUrlArgument(arg)) urlsToOpen.push(arg);
+        else filesToOpen.push(arg);
+    });
+}
+
+collectLaunchArguments(process.argv.slice(2));
+
+if (process.defaultApp && process.argv.length >= 2) {
+    app.setAsDefaultProtocolClient('intrigue', process.execPath, [process.argv[1]]);
+} else {
+    app.setAsDefaultProtocolClient('intrigue');
+}
+
+const gotSingleInstanceLock = app.requestSingleInstanceLock();
+if (!gotSingleInstanceLock) {
+    app.quit();
+}
+
+app.on('second-instance', (_, commandLine) => {
+    const incomingUrls = commandLine.filter(isOpenUrlArgument);
+    if (incomingUrls.length === 0) return;
+    incomingUrls.forEach((url) => {
+        if (app.isReady()) windowManager.openUrl(url);
+        else urlsToOpen.push(url);
+    });
+});
 
 app.on('open-file', (event, filePath) => {
     if (app.isReady()) {
         windowManager.createWindow(filePath);
     } else {
         filesToOpen.push(filePath);
+    }
+    event.preventDefault();
+});
+
+app.on('open-url', (event, url) => {
+    if (app.isReady()) {
+        windowManager.openUrl(url);
+    } else {
+        urlsToOpen.push(url);
     }
     event.preventDefault();
 });
@@ -65,12 +109,13 @@ app.on('ready', async () => {
     const menu = Menu.buildFromTemplate(menuTemplate);
     Menu.setApplicationMenu(menu);
 
-    // If there are files to open, then create new windows for them.
+    // If there are files or URLs to open, create windows for them.
     // Otherwise, just create a new empty window.
-    if (filesToOpen.length > 0) {
+    if (filesToOpen.length > 0 || urlsToOpen.length > 0) {
         filesToOpen.forEach((filePath) => {
             windowManager.createWindow(filePath);
         });
+        await Promise.all(urlsToOpen.map((url) => windowManager.openUrl(url)));
     } else {
         windowManager.createWindow();
     }
