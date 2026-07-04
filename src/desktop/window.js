@@ -93,10 +93,15 @@ export class EditorWindowManager {
     constructor() {
         this.windows = [];
         this.allowCloseWindows = new WeakSet();
+        this.isQuitting = false;
         this.docIdToWindow = new Map();
         this.pendingDocIdToWindow = new Map();
         this.filePathToWindow = new Map();
         this.windowToIdentity = new WeakMap();
+    }
+
+    beginQuit() {
+        this.isQuitting = true;
     }
 
     getRegisteredDocWindow(documentId) {
@@ -201,7 +206,7 @@ export class EditorWindowManager {
         return result;
     }
 
-    closeAfterSave(window) {
+    closeAfterSave(window, afterClose) {
         let attempts = 0;
         const checkSaved = () => {
             if (window.isDestroyed()) return;
@@ -211,6 +216,7 @@ export class EditorWindowManager {
                 setTimeout(checkSaved, 100);
             } else {
                 this.allowCloseWindows.add(window);
+                if (afterClose) window.once('closed', afterClose);
                 window.close();
             }
         };
@@ -269,11 +275,17 @@ export class EditorWindowManager {
             if (!window.documentEdited) return;
 
             e.preventDefault();
+            const wasQuitting = this.isQuitting;
+            const resumeQuitAfterClose = wasQuitting ? () => app.quit() : null;
             const closeChoice = this.promptToClose(window);
-            if (closeChoice === 2) return;
+            if (closeChoice === 2) {
+                if (wasQuitting) this.isQuitting = false;
+                return;
+            }
 
             if (closeChoice === 1) {
                 this.allowCloseWindows.add(window);
+                if (resumeQuitAfterClose) window.once('closed', resumeQuitAfterClose);
                 window.close();
                 return;
             }
@@ -287,7 +299,7 @@ export class EditorWindowManager {
                 this.setFilePath(window, newSavePath, true);
             }
 
-            this.closeAfterSave(window);
+            this.closeAfterSave(window, resumeQuitAfterClose);
         });
 
         window.on('closed', () => {
