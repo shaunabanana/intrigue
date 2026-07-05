@@ -13,6 +13,7 @@ import {
     computed, onBeforeUnmount, onMounted, provide, reactive, ref, watch,
 } from 'vue';
 import Message from '@arco-design/web-vue/es/message';
+import { nanoid } from 'nanoid';
 
 // import Avatar from 'vue-boring-avatars';
 
@@ -178,7 +179,7 @@ onMounted(() => {
         const queryString = window.location.search;
         const urlParams = new URLSearchParams(queryString);
         const parsedUrl = parseIntrigueUrl(window.location.href);
-        const documentId = urlParams.get('document');
+        const documentId = urlParams.get('document') || nanoid();
         console.log(`[App][mounted] urlParams.document is ${documentId}`);
 
         if (documentId === 'tutorial') {
