@@ -1,417 +1,271 @@
 <template>
-    <div id="app">
-        <editor :data="data" :selection="selection"
-            @create-node="createNode"
-            @update-node="updateNode"
-            @delete-node="deleteNode"
-            @edit-start="editing = true"
-            @edit-stop="editing = false"
-            @snap-node="snapNode"
-            @unsnap-node="unsnapNode"
-            @update-edge="updateEdge"
-            @update-selection="updateSelection">
-        </editor>
+    <TitleBar />
+    <DocumentCanvas />
+    <Debug v-if="debug"/>
+    <div v-if="appState.loading" class="loading-overlay">
+        <a-spin :size="36" />
+        <div class="loading-text">Opening document...</div>
     </div>
 </template>
 
-<script>
-import Editor from './components/editor';
-const { ipcRenderer, clipboard } = require('electron');
-const uuid = require('uuid');
+<script setup>
+import {
+    computed, onBeforeUnmount, onMounted, provide, reactive, ref, watch,
+} from 'vue';
+import Message from '@arco-design/web-vue/es/message';
 
-export default {
-    name: 'App',
-    components: { Editor },
-    data() {
-        return {
-            data: {
-                nodes: [],
-                edges: []
-            },
-            nodeMap: {},
-            edgeMap: {},
-            edgeNodeMap: {},
-            selection: [],
+// import Avatar from 'vue-boring-avatars';
 
-            filePath: null,
-            edited: false,
-            editing: false,
+import getRandomFruitsName from 'random-fruits-name';
 
-            clipboard: [],
-            undo: [],
-            redo: [],
-        }
-    },
+import { IntrigueDocument } from '@/store';
+import intrigueMachine from '@/state';
+import { useMachine } from '@xstate/vue';
 
-    methods: {
-        findNode (id) {
-            if (this.nodeMap[id]) return this.nodeMap[id];
-            for (const node of this.data.nodes) {
-                if (node.id === id) {
-                    this.nodeMap[id] = node;
-                    return node;
-                }
-            }
-        },
+import tutorialData from '@/utils/tutorial';
+import { parseIntrigueUrl } from '@/utils/links';
 
-        findEdge (id) {
-            if (this.edgeMap[id]) return this.edgeMap[id];
-            for (const edge of this.data.edges) {
-                if (edge.id === id) {
-                    this.edgeMap[id] = edge;
-                    return edge;
-                }
-            }
-        },
+import TitleBar from '@/components/window/TitleBar.vue';
+import DocumentCanvas from '@/components/canvas/VueFlowCanvas.vue';
+import Debug from '@/components/utils/Debug.vue';
 
-        findEdgeByNodes (source, target) {
-            if (this.edgeNodeMap[source + target]) return this.edgeNodeMap[source + target];
-            if (this.edgeNodeMap[target + source]) return this.edgeNodeMap[target + source];
-            for (const edge of this.data.edges) {
-                if (
-                    edge.source === source && edge.target === target
-                    || edge.target === source && edge.source === target
-                ) {
-                    this.edgeNodeMap[source + target] = edge;
-                    this.edgeNodeMap[target + source] = edge;
-                    return edge;
-                }
-            }
-        },
+const intrigueDocument = new IntrigueDocument();
+const store = computed(() => intrigueDocument.store);
+const appState = reactive({
+    users: [],
+    loading: true,
+    title: '',
+    docId: undefined,
+});
+const debug = ref(false);
+const filePath = ref(undefined);
+const selectedElementIds = ref([]);
+const openSelectionTarget = ref(null);
+const { state, send } = useMachine(intrigueMachine);
+const electron = Boolean(window.intrigue?.isElectron);
+const electronListenerCleanup = [];
 
-        updateSelection (content) {
-            if (content.set) {
-                this.selection = content.set;
-            } else {
-                if (content.add) {
-                    content.add.forEach((id) => {
-                        this.selection.push(id);
-                    })
-                }
-            }
-            this.selection = [...new Set(this.selection)];
-        },
+provide('document', intrigueDocument);
+provide('store', store);
+provide('state', computed(() => state.value));
+provide('send', send);
+provide('filePath', computed(() => filePath.value));
+provide('selectedElementIds', computed(() => selectedElementIds.value));
+provide('setSelectedElementIds', (ids) => {
+    selectedElementIds.value = ids;
+});
+provide('openSelectionTarget', computed(() => openSelectionTarget.value));
 
-        createNode (id, x, y, content, shouldRecord) {
-            if (shouldRecord) this.recordHistory();
-            const node = {
-                id: id,
-                type: 'note',
-                x: x,
-                y: y,
-                w: 200,
-                h: 30,
-                data: { content: content ? content : '<p></p>' },
-                edges: [],
-                snap: [],
-                snapped: null
-            }
-            this.data.nodes.push(node);
-            this.setEdited();
-        },
+Object.keys(state.value.context).forEach((key) => {
+    provide(key, computed(() => state.value.context[key]));
+});
 
-        updateNode (id, content, shouldRecord) {
-            if (shouldRecord) this.recordHistory();
-            let node = this.findNode(id);
-            if (content.set) {
-                Object.keys(content.set).forEach(key => {
-                    node[key] = content.set[key];
-                })
-            } else if (content.by) {
-                Object.keys(content.by).forEach(key => {
-                    node[key] += content.by[key];
-                })
-            }
-            this.setEdited();
-        },
+function broadcastUsername() {
+    const fruit = getRandomFruitsName('en', { maxWords: 1 });
+    intrigueDocument.updateAwareness('name', `Anonymous ${fruit}`);
+}
 
-        deleteNode (id) {
-            this.recordHistory();
-            if (id) this.selection.push(id);
-            this.selection.forEach((nodeId) => {
-                let node = this.findNode(nodeId);
-
-                // Unsnap node
-                if (node.snapped) {
-                    this.unsnapNode(node.id, node.snapped);
-                }
-
-                // Delete edges
-                node.edges.forEach((edgeId) => {
-                    delete this.edgeMap[edgeId];
-                })
-
-                this.data.edges = this.data.edges.filter( edge => !node.edges.includes(edge.id) );
-
-                delete this.nodeMap[nodeId];
-            })
-            this.data.nodes = this.data.nodes.filter( node => !this.selection.includes(node.id) );
-            this.selection = [];
-            this.setEdited();
-        },
-
-        snapNode (source, target) {
-            this.recordHistory();
-            let sourceNode = this.findNode(source);
-            let targetNode = this.findNode(target);
-            if (!targetNode.snap.includes(source)) {
-                // If the node is already snapped to something, then unsnap it.
-                if (sourceNode.snapped) {
-                    this.unsnapNode(source, sourceNode.snapped)
-                }
-                targetNode.snap.push(source);
-                sourceNode.snapped = target;
-            }
-            this.setEdited();
-        },
-
-        unsnapNode (source, target) {
-            this.recordHistory();
-            let sourceNode = this.findNode(source);
-            let targetNode = this.findNode(target);
-            targetNode.snap = targetNode.snap.filter((id) => id !== source);
-            sourceNode.snapped = null;
-            this.setEdited();
-        },
-
-        updateEdge (id, source, target) {
-            this.recordHistory();
-            let edge = this.findEdgeByNodes(source, target);
-
-            if (edge) {
-                // Delete the edge.
-                let sourceNode = this.findNode(source);
-                let targetNode = this.findNode(target);
-                sourceNode.edges = sourceNode.edges.filter( (edgeId) => edgeId !== edge.id );
-                targetNode.edges = targetNode.edges.filter( (edgeId) => edgeId !== edge.id );
-                this.data.edges = this.data.edges.filter( (other) => other.id !== edge.id );
-                delete this.edgeMap[edge.id];
-                delete this.edgeNodeMap[source + target];
-                delete this.edgeNodeMap[target + source];
-            } else {
-                // Create the edge.
-                edge = {
-                    id: id,
-                    source: source,
-                    target: target,
-                    x1: 0, y1: 0, x2: 0, y2: 0
-                }
-
-                // Add the edge id to source and target nodes
-                let sourceNode = this.findNode(source);
-                sourceNode.edges.push(id);
-                let targetNode = this.findNode(target);
-                targetNode.edges.push(id);
-
-                // Add the edge object to edges.
-                this.data.edges.push(edge);
-            }
-            this.setEdited();
-        },
-
-        deleteEdge (source, target) {
-            this.recordHistory();
-            for (const edge of this.data.edges) {
-                if (edge.source === source && edge.target === target) {
-                    let sourceNode = this.findNode(source);
-                    let targetNode = this.findNode(target);
-                    sourceNode.edges = sourceNode.edges.filter( (edgeId) => edgeId !== edge.id );
-                    targetNode.edges = targetNode.edges.filter( (edgeId) => edgeId !== edge.id );
-                }
-            }
-            this.setEdited();
-        },
-
-        setEdited () {
-            ipcRenderer.send('set-edited');
-            this.edited = true;
-        },
-
-        copy () {
-            if (this.editing) {
-                document.execCommand('copy');
-            } else {
-                let clipboardContent = [];
-                this.selection.forEach((id) => {
-                    let node = this.findNode(id);
-                    let nodeCopy = JSON.parse(JSON.stringify(node));
-                    nodeCopy.x += 30;
-                    nodeCopy.y += 30;
-                    nodeCopy.edges = [];
-                    nodeCopy.snap = [];
-                    nodeCopy.snapped = null;
-                    clipboardContent.push(nodeCopy);
-                })
-                clipboard.writeText(JSON.stringify({
-                    type: 'intrigue-clipboard',
-                    content: clipboardContent
-                }));
-            }
-        },
-
-        paste () {
-            let clipboardText = clipboard.readText();
-            let clipboardContent, pasteAsText = true;
-            try {
-                clipboardContent = JSON.parse(clipboardText);
-                if (clipboardContent.type && clipboardContent.type === 'intrigue-clipboard') {
-                    pasteAsText = false;
-                }
-            } catch {
-                console.log('Pasting as text:', clipboardText);
-            }
-
-            if (pasteAsText) {
-                if (this.editing) {
-                    // paste normally from clipboard.
-                    document.execCommand('paste');
-                } else {
-                    // Create a new node with the text.
-
-                    console.log('Pasting as new note', clipboardText);
-                    this.createNode(
-                        uuid.v4(), window.innerWidth / 2, window.innerHeight / 2, clipboardText
-                    );
-                }
-            } else {
-                console.log(clipboardContent);
-                this.selection = [];
-                clipboardContent.content.forEach((node) => {
-                    node.id = uuid.v4();
-                    this.data.nodes.push(node);
-                    this.selection.push(node.id);
-                })
-            }
-        },
-
-        recordHistory () {
-            // this.undo.push(JSON.stringify(this.data));
-        },
-
-        undoHistory () {
-            if (this.editing) {
-                document.execCommand('undo');
-            } else {
-                if (this.undo.length === 0) return;
-                this.redo.push(JSON.stringify(this.data));
-                this.data = JSON.parse(this.undo.pop());
-            }
-        },
-
-        redoHistory () {
-            if (this.editing) {
-                document.execCommand('redo');
-            } else {
-                if (this.redo.length === 0) return;
-                this.undo.push(JSON.stringify(this.data));
-                this.data = JSON.parse(this.redo.pop());
-            }
-            
-        }
-    },
-
-    mounted () {
-        ipcRenderer.on('new-file', () => {
-            this.data = { nodes: [], edges: [] };
-            this.nodeMap = {};
-            this.edgeMap = {};
-            this.edgeNodeMap = {};
-            this.selection = [];
-            this.filePath = null;
-            this.edited = false;
-        })
-
-        ipcRenderer.on('get-data', (event) => {
-            event.sender.send('send-data', this.edited, this.filePath, JSON.stringify(this.data, null, 2));
-        })
-
-        ipcRenderer.on('set-data', (event, data) => {
-            let newData = JSON.parse(data);
-            newData.nodes.forEach((node) => {
-                node.x = node.x ? node.x : window.innerWidth / 2;
-                node.y = node.y ? node.y : window.innerHeight / 2;
-                node.w = node.w ? node.w : 200;
-                node.h = node.h ? node.h : 30;
-            })
-            this.data = newData;
-        })
-
-        ipcRenderer.on('set-filepath', (event, filePath) => {
-            this.filePath = filePath;
-        })
-
-        ipcRenderer.on('save-finish', () => {
-            this.edited = false;
-        })
-
-        ipcRenderer.on('undo', () => {
-            this.undoHistory();
-        })
-
-        ipcRenderer.on('redo', () => {
-            this.redoHistory();
-        })
-
-        ipcRenderer.on('cut', () => {
-            this.copy();
-            this.data.nodes = this.data.nodes.filter((node) => {
-                return !this.selection.includes(node.id);
-            })
-        })
-
-        ipcRenderer.on('copy', () => {
-            this.copy();
-        })
-
-        ipcRenderer.on('paste', () => {
-            this.paste();
-        })
-
-        ipcRenderer.on('selectall', () => {
-            if (this.editing) {
-                document.execCommand('selectAll');
-            } else {
-                this.selection = [];
-                this.data.nodes.forEach((node) => {
-                    this.selection.push(node.id);
-                })
-            }
-        })
+function preventSpaceScroll(event) {
+    if (event.code === 'Space' && event.target === document.body) {
+        event.preventDefault();
     }
 }
+
+function setDocumentEdited(value) {
+    if (!electron) return;
+    window.intrigue.setEdited(value);
+}
+
+function reportDocumentIdentity() {
+    if (!electron || !store.value.metadata.id) return;
+    window.intrigue.setDocumentIdentity({
+        documentId: store.value.metadata.id,
+        filePath: filePath.value || null,
+    });
+}
+
+function setOpenSelectionTarget(target) {
+    if (!target?.shareId && !(target?.selectionIds?.length > 0)) return;
+    openSelectionTarget.value = {
+        shareId: target.shareId,
+        selectionIds: target.selectionIds || [],
+        nonce: Date.now(),
+    };
+}
+
+function startLoading() {
+    appState.loading = true;
+}
+
+function stopLoading() {
+    appState.loading = false;
+}
+
+onMounted(() => {
+    intrigueDocument.on('synced', () => {
+        broadcastUsername();
+        stopLoading();
+        reportDocumentIdentity();
+    });
+
+    intrigueDocument.on('commit', () => {
+        setDocumentEdited(true);
+    });
+
+    intrigueDocument.on('remote-update', () => {
+        setDocumentEdited(true);
+    });
+
+    intrigueDocument.on('migrated', () => {
+        setDocumentEdited(true);
+    });
+
+    intrigueDocument.on('saved', () => {
+        Message.success('Saved!');
+        setDocumentEdited(false);
+    });
+
+    intrigueDocument.on('save-error', () => {
+        Message.error('Failed to save.');
+    });
+
+    intrigueDocument.on('sync-error', () => {
+        Message.error('Failed to start document sync.');
+    });
+
+    // Prevent space from causing scrolling down behavior.
+    window.addEventListener('keydown', preventSpaceScroll);
+
+    if (electron) {
+        window.intrigue.getPackaged().then((isPackaged) => {
+            console.log(`[App][get-packaged] ${isPackaged}`);
+            debug.value = !isPackaged;
+        });
+
+        electronListenerCleanup.push(window.intrigue.onNewFile(() => {
+            console.log('[App][new-file] This is a new empty file.');
+            startLoading();
+            intrigueDocument.initSync();
+            reportDocumentIdentity();
+            stopLoading();
+        }));
+
+        electronListenerCleanup.push(window.intrigue.onSetFilePath((newFilePath, overwrite) => {
+            console.log(`[App][set-filepath] filePath is ${newFilePath}.`);
+            startLoading();
+            filePath.value = newFilePath;
+            intrigueDocument.initPersistence(newFilePath, overwrite);
+        }));
+
+        electronListenerCleanup.push(window.intrigue.onSaveFile(() => {
+            console.log('[App][save-file] Manual save to disk.');
+            intrigueDocument.saveToDisk();
+        }));
+
+        electronListenerCleanup.push(window.intrigue.onOpenRemoteDocument((target) => {
+            console.log(`[App][open-remote-document] documentId is ${target.documentId}.`);
+            startLoading();
+            intrigueDocument.initSync(target.documentId);
+            reportDocumentIdentity();
+            setOpenSelectionTarget(target);
+            stopLoading();
+        }));
+
+        electronListenerCleanup.push(window.intrigue.onOpenSelection((target) => {
+            setOpenSelectionTarget(target);
+        }));
+    } else {
+        const queryString = window.location.search;
+        const urlParams = new URLSearchParams(queryString);
+        const parsedUrl = parseIntrigueUrl(window.location.href);
+        const documentId = urlParams.get('document');
+        console.log(`[App][mounted] urlParams.document is ${documentId}`);
+
+        if (documentId === 'tutorial') {
+            console.log('[App][mounted@web] Loading tutorial data...');
+            Object.keys(tutorialData.nodes).forEach((nodeId) => {
+                store.value.nodes[nodeId] = tutorialData.nodes[nodeId];
+            });
+
+            Object.keys(tutorialData.links).forEach((linkId) => {
+                store.value.links[linkId] = tutorialData.links[linkId];
+            });
+            intrigueDocument.initSync(documentId);
+            stopLoading();
+        } else {
+            intrigueDocument.initPersistence(documentId);
+        }
+        if (parsedUrl.valid) setOpenSelectionTarget(parsedUrl);
+    }
+});
+
+onBeforeUnmount(() => {
+    console.log('[App][beforeUnmount] Closing document...');
+    window.removeEventListener('keydown', preventSpaceScroll);
+    electronListenerCleanup.forEach((cleanup) => cleanup());
+    intrigueDocument.close();
+    console.log('[App][beforeUnmount] Document closed.');
+});
+
+watch(() => intrigueDocument.users, () => {
+    if (!intrigueDocument.users) return;
+    const users = [];
+    Object.keys(intrigueDocument.users).forEach((userId) => {
+        users.push(intrigueDocument.users[userId]);
+    });
+    appState.users = users;
+}, { deep: true });
+
+watch(() => intrigueDocument.store.metadata.name, () => {
+    appState.title = intrigueDocument.store.metadata.name;
+}, { deep: true });
 </script>
 
-<style>
-
-html, body {
-    margin: 0;
-    padding: 0;
-    overflow: hidden;
-    margin: 0px;
-    font-family: sans-serif;
-    font-size: 12px;
-    background: #F9F9F9;
-    background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHdpZHRoPScxNScgaGVpZ2h0PScxNSc+CiAgPHJlY3Qgd2lkdGg9JzUwJyBoZWlnaHQ9JzUwJyBmaWxsPSIjRjlGOUY5IiAvPgogIDxjaXJjbGUgY3g9IjEiIGN5PSIxIiByPSIwLjgiIGZpbGw9IiNDQUNBQ0IiLz4KPC9zdmc+"); 
-    background-repeat: repeat;
-}
-
-*:focus {
-    outline: none;
-}
-
+<style lang="scss">
+html,
+body,
 #app {
-    font-family: Helvetica, Arial, sans-serif;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-    color: #0d1c2b;
-
-    position: absolute;
+    --background: #F8F9F9;
+    --highlight-border: rgb(255, 112, 143);
     width: 100%;
     height: 100%;
+    overflow: hidden;
+    font-family: 'Atkinson Hyperlegible', system-ui, -apple-system, BlinkMacSystemFont,
+        'Segoe UI', sans-serif;
+    background: var(--background);
 }
 
-#graph {
-    width: 100%;
-    height: 100%;
+.loading-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 20000;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 0.75rem;
+    color: var(--highlight-border);
+    background: rgba(248, 249, 249, 0.86);
+    backdrop-filter: blur(6px);
+}
+
+.loading-overlay .arco-spin-icon,
+.loading-overlay .arco-spin-tip {
+    color: var(--highlight-border);
+}
+
+.loading-text {
+    color: rgba(60, 65, 70, 0.72);
+    font-size: 0.86rem;
+}
+
+.noselect {
+    -webkit-touch-callout: none; /* iOS Safari */
+    -webkit-user-select: none; /* Safari */
+    -khtml-user-select: none; /* Konqueror HTML */
+    -moz-user-select: none; /* Old versions of Firefox */
+    -ms-user-select: none; /* Internet Explorer/Edge */
+    user-select: none; /* Non-prefixed version, currently
+                                  supported by Chrome, Edge, Opera and Firefox */
 }
 </style>

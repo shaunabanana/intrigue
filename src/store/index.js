@@ -1,22 +1,7 @@
-import Vue from 'vue'
-import Vuex from 'vuex'
+export { default as IntrigueDocument } from './document';
+export { default as NodeTypes } from './types';
 
-Vue.use(Vuex)
+// export const IntrigueDocument = document.IntrigueDocument;
+// export const NodeTypes = document.NodeTypes;
 
-export default new Vuex.Store({
-    state: {
-        data: {
-            nodes: [],
-            edges: []
-        },
-        nodeMap: {},
-        edgeMap: {},
-        edgeNodeMap: {},
-        selection: [],
-    },
-    mutations: {
-        increment (state) {
-            state.count++;
-        }
-    }
-})
+// export const documentKey = Symbol('document');

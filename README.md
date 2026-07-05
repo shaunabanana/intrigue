@@ -30,18 +30,22 @@ Features include:
 * _COMING SOON: Import BibTeX files exported from a literature search or other tools like Zotero._
 * _COMING SOON: Export papers into a BibTeX to directly use in your paper-writing process._
 
-Here's a screenshot of my work-in-progress research canvas:
-![A screenshot of the app.](./assets/screenshot.png)
+### Build Electron app
+```
+npm run build
+```
 
-## How to use?
-It's simple!
-* **Create notes:** Double click to create a note.
-  * Enter an DOI, ISBN, or URL into a note to have it automatically turned into a "reference note" (blue).
-  * Double click the note again the edit. Or for a reference note, go to a site for PDF ;)
-* **Snap notes:** Drag one note onto another to snap them together.
-* **Connect notes:** Select a note, hold Command and click other notes to connect.
-  * Click again to disconnect.
-* **Pan canvas:** Hold space to pan the canvas.
+### Build web interface
+```
+npm run web:build
+```
+
+Set `VITE_WEB_BASE_URL` to control generated share links in both Electron and web builds.
+
+### Lints and fixes files
+```
+npm run lint
+```
 
 ## I found a bug!
 Please file an issue [here](https://github.com/shaunabanana/intrigue/issues), or email me at shengchenzhang1207@gmail.com.
