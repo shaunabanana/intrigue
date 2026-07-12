@@ -110,9 +110,11 @@ const selectionIds = ref([]);
 const selectedEdgeIds = ref([]);
 const dragStartPositions = ref({});
 const viewport = ref({ x: 0, y: 0, zoom: 1 });
+const cursorFlowPosition = ref(null);
 const awarenessNow = ref(Date.now());
 let awarenessClockInterval = null;
 let openSelectionRetryTimer = null;
+let pasteOffset = 0;
 const nodeTypes = {
     intrigue: markRaw(IntrigueFlowNode),
 };
@@ -135,6 +137,8 @@ const defaultEdgeOptions = {
         strokeWidth: 1.5,
     },
 };
+const clipboardMimeType = 'application/x-intrigue-data';
+const pasteStep = 24;
 
 const {
     screenToFlowCoordinate,
@@ -436,6 +440,183 @@ function setEdgeSelection(ids) {
         setSelectedElementIds([...selectionIds.value, ...selectedEdgeIds.value]);
     }
     intrigueDocument.updateAwareness('selection', [...selectionIds.value, ...selectedEdgeIds.value]);
+}
+
+function clonePlain(value) {
+    return JSON.parse(JSON.stringify(value));
+}
+
+function escapeHtml(value) {
+    return value
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
+function getPastePosition() {
+    const position = cursorFlowPosition.value || screenToFlowCoordinate({
+        x: window.innerWidth / 2,
+        y: window.innerHeight / 2,
+    });
+    return {
+        x: position.x + pasteOffset,
+        y: position.y + pasteOffset,
+    };
+}
+
+function getClipboardBounds(nodes) {
+    return nodes.reduce((bounds, node) => {
+        const width = node.w || 200;
+        const height = node.h || 32;
+        return {
+            minX: Math.min(bounds.minX, node.x || 0),
+            minY: Math.min(bounds.minY, node.y || 0),
+            maxX: Math.max(bounds.maxX, (node.x || 0) + width),
+            maxY: Math.max(bounds.maxY, (node.y || 0) + height),
+        };
+    }, {
+        minX: Infinity,
+        minY: Infinity,
+        maxX: -Infinity,
+        maxY: -Infinity,
+    });
+}
+
+function createClipboardPayload() {
+    const selected = new Set(selectionIds.value);
+    const nodes = selectionIds.value
+        .map((id) => store.value.nodes[id])
+        .filter(Boolean)
+        .map((node) => {
+            const item = clonePlain(node);
+            const position = getNodePosition(node.id);
+            item.x = position.x;
+            item.y = position.y;
+            delete item.links;
+            delete item.children;
+            delete item.parent;
+            return item;
+        });
+    const links = Object.values(store.value.links)
+        .filter((link) => selected.has(link.source) && selected.has(link.target))
+        .map(clonePlain);
+    const children = selectionIds.value.flatMap((id) => {
+        const node = store.value.nodes[id];
+        return (node?.children || [])
+            .filter((childId) => selected.has(childId))
+            .map((childId) => ({ source: id, target: childId }));
+    });
+    return {
+        type: 'selection',
+        version: 1,
+        nodes,
+        links,
+        children,
+    };
+}
+
+function copySelection(event) {
+    if (editing.value || selectionIds.value.length === 0 || !event.clipboardData) return;
+    const payload = createClipboardPayload();
+    event.clipboardData.setData(clipboardMimeType, JSON.stringify(payload));
+    event.preventDefault();
+}
+
+function textToNoteContent(text) {
+    return `<p>${escapeHtml(text.trim()).replace(/\n/g, '<br>')}</p>`;
+}
+
+function htmlToNoteContent(html, text) {
+    const match = html.match(/<!--StartFragment-->([\s\S]*?)<!--EndFragment-->/);
+    const content = (match ? match[1] : html).trim();
+    if (!content) return textToNoteContent(text);
+
+    const template = document.createElement('template');
+    template.innerHTML = content;
+    template.content.querySelectorAll('script, style, meta, link').forEach((element) => {
+        element.remove();
+    });
+    return template.innerHTML.trim() || textToNoteContent(text);
+}
+
+function pasteIntrigueData(payload) {
+    if (payload?.type !== 'selection' || !Array.isArray(payload.nodes)) return false;
+    if (payload.nodes.length === 0) return false;
+    const bounds = getClipboardBounds(payload.nodes);
+    const target = getPastePosition();
+    const dx = target.x - (bounds.minX + (bounds.maxX - bounds.minX) / 2);
+    const dy = target.y - (bounds.minY + (bounds.maxY - bounds.minY) / 2);
+    const idMap = Object.fromEntries(payload.nodes.map((node) => [node.id, nanoid()]));
+    const links = (payload.links || [])
+        .filter((link) => idMap[link.source] && idMap[link.target])
+        .map((link) => ({
+            ...clonePlain(link),
+            id: nanoid(),
+            source: idMap[link.source],
+            target: idMap[link.target],
+        }));
+    const children = (payload.children || [])
+        .filter((pair) => idMap[pair.source] && idMap[pair.target])
+        .map((pair) => ({
+            source: idMap[pair.source],
+            target: idMap[pair.target],
+        }));
+    const nodeItems = payload.nodes.map((node) => ({
+        ...clonePlain(node),
+        id: idMap[node.id],
+        x: (node.x || 0) + dx,
+        y: (node.y || 0) + dy,
+    }));
+    nodeItems[0].links = links;
+    nodeItems[0].children = children;
+    intrigueDocument.commit('createNodes', nodeItems);
+    setSelection(nodeItems.map((node) => node.id));
+    pasteOffset += pasteStep;
+    return true;
+}
+
+function pasteNote({ html, text }) {
+    const trimmed = text.trim();
+    if (!trimmed && !html.trim()) return false;
+    const position = getPastePosition();
+    const nodeId = nanoid();
+    intrigueDocument.commit('createNode', {
+        id: nodeId,
+        type: NodeTypes.Note,
+        content: html.trim() ? htmlToNoteContent(html, text) : textToNoteContent(trimmed),
+        x: position.x - 100,
+        y: position.y - 16,
+        w: 200,
+        h: 32,
+    });
+    setSelection([nodeId]);
+    send({
+        type: 'create node',
+        node: nodeId,
+    });
+    pasteOffset += pasteStep;
+    return true;
+}
+
+function pasteClipboard(event) {
+    if (editing.value || !event.clipboardData) return;
+    const intrigueData = event.clipboardData.getData(clipboardMimeType);
+    if (intrigueData) {
+        try {
+            if (pasteIntrigueData(JSON.parse(intrigueData))) {
+                event.preventDefault();
+                return;
+            }
+        } catch (error) {
+            console.warn('[VueFlowCanvas][pasteClipboard] Invalid Intrigue clipboard data.', error);
+        }
+    }
+    if (pasteNote({
+        html: event.clipboardData.getData('text/html'),
+        text: event.clipboardData.getData('text/plain'),
+    })) event.preventDefault();
 }
 
 function getShareAnchorSelection(shareId) {
@@ -818,6 +999,8 @@ function updateCursorPosition(event) {
         x: event.clientX,
         y: event.clientY,
     });
+    cursorFlowPosition.value = position;
+    pasteOffset = 0;
     intrigueDocument.updateAwareness('lastSeen', Date.now());
     intrigueDocument.updateAwareness('cursorX', position.x);
     intrigueDocument.updateAwareness('cursorY', position.y);
@@ -837,6 +1020,8 @@ onMounted(() => {
     keyboard.on('keydown', 'Backspace', deleteSelection);
     keyboard.on('keydown', '$mod+Z', undo);
     keyboard.on('keydown', '$mod+Shift+Z', redo);
+    window.addEventListener('copy', copySelection);
+    window.addEventListener('paste', pasteClipboard);
 
     intrigueDocument.on('synced', () => {
         setSelection([]);
@@ -884,6 +1069,8 @@ onBeforeUnmount(() => {
         awarenessClockInterval = null;
     }
     window.removeEventListener('beforeunload', clearAwarenessSelection);
+    window.removeEventListener('copy', copySelection);
+    window.removeEventListener('paste', pasteClipboard);
     keyboard.removeListeners();
 });
 </script>
