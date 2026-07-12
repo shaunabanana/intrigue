@@ -39,6 +39,13 @@
             />
         </VueFlow>
 
+        <CanvasBoxSelect
+            :selection-ids="selectionIds"
+            :disabled="Boolean(editing || panning || dragging)"
+            :is-remotely-selected="isRemotelySelected"
+            @select="onBoxSelect"
+        />
+
         <Cursor
             v-for="user in remoteUsers"
             :key="user.id"
@@ -85,6 +92,7 @@ import { NodeTypes } from '@/store';
 import Keyboard from '@/keyboard';
 
 import Cursor from '@/components/canvas/Cursor.vue';
+import CanvasBoxSelect from '@/components/canvas/CanvasBoxSelect.vue';
 import IntrigueFlowEdge from '@/components/canvas/IntrigueFlowEdge.vue';
 import IntrigueFlowNode from '@/components/canvas/IntrigueFlowNode.vue';
 
@@ -407,7 +415,8 @@ const contextualHelp = computed(() => {
     if (!hasSelection.value) {
         return [
             { id: 'pan', shortcut: shortcutLabel(['Meta', '+Scroll']), text: 'to zoom' },
-            { id: 'select', shortcut: 'Shift', text: 'to multi-select' },
+            { id: 'select', shortcut: 'Drag', text: 'to box-select' },
+            { id: 'add-select', shortcut: shortcutLabel([shiftKey, 'Drag']), text: 'to add to selection' },
             { id: 'create', shortcut: 'Double-click', text: 'to create/edit a node' },
         ];
     }
@@ -440,6 +449,11 @@ function setEdgeSelection(ids) {
         setSelectedElementIds([...selectionIds.value, ...selectedEdgeIds.value]);
     }
     intrigueDocument.updateAwareness('selection', [...selectionIds.value, ...selectedEdgeIds.value]);
+}
+
+function onBoxSelect(ids) {
+    setSelection(ids);
+    setEdgeSelection([]);
 }
 
 function clonePlain(value) {
