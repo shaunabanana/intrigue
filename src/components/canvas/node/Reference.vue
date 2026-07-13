@@ -9,12 +9,15 @@
 </template>
 
 <script setup>
+import { getReferenceOpenUrl } from '@/literature';
+
 const props = defineProps({
     id: String,
     type: String,
     title: String,
     author: Array,
     identifier: String,
+    reference: Object,
 });
 
 function formatAuthors(authors) {
@@ -31,15 +34,12 @@ function formatAuthors(authors) {
 }
 
 function showFullText() {
-    if (props.type === 'zotero' || props.type === 'zotero-link') {
-        window.open(props.identifier);
-    } else if (props.type === 'doi') {
-        window.open(`https://sci-hub.se/${props.identifier}`);
-    } else if (props.type === 'isbn') {
-        window.open(`http://libgen.rs/search.php?req=${props.identifier}`);
-    } else if (props.type === 'url') {
-        window.open(props.identifier);
-    }
+    const url = getReferenceOpenUrl({
+        referenceType: props.type,
+        identifier: props.identifier,
+        reference: props.reference,
+    });
+    if (url) window.open(url);
 }
 </script>
 

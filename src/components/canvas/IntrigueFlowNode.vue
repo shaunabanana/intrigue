@@ -89,6 +89,7 @@
             :identifier="node.identifier"
             :title="node.title"
             :author="node.author"
+            :reference="node.reference"
         />
 
         <div
@@ -130,7 +131,7 @@ import {
 } from '@vue-flow/node-resizer';
 
 import { NodeTypes } from '@/store';
-import { extractIdentifier, fetchLiteratureInfo } from '@/literature';
+import { detectReference, fetchReference } from '@/literature';
 
 import Note from '@/components/canvas/node/Note.vue';
 import Reference from '@/components/canvas/node/Reference.vue';
@@ -326,53 +327,38 @@ function onResizeEnd({ params }) {
 }
 
 function parseNoteContent(content) {
-    const identifier = extractIdentifier(content);
-    if (identifier) {
-        console.log(`[IntrigueFlowNode][parseNoteContent@extractIdentifier] ${JSON.stringify(identifier)}`);
+    const match = detectReference(content);
+    if (match) {
+        const pluginId = match.pluginId || match.type;
+        console.log(`[IntrigueFlowNode][parseNoteContent@detectReference] ${JSON.stringify(match)}`);
         intrigueDocument.commit('updateNode', {
             id: props.id,
             set: {
                 type: NodeTypes.Reference,
-                identifier: identifier.identifier,
-                referenceType: identifier.type,
+                identifier: match.identifier,
+                referenceType: pluginId,
+                reference: {
+                    pluginId,
+                    identifier: match.identifier,
+                    raw: match.raw || content,
+                },
                 color: 'blue',
             },
         });
 
-        if (identifier.type === 'zotero') {
+        fetchReference(match).then((info) => {
+            console.log(`[IntrigueFlowNode][parseNoteContent@fetchReference] ${JSON.stringify(info)}`);
             intrigueDocument.commit('updateNode', {
                 id: props.id,
                 set: {
-                    title: identifier.title,
-                    author: identifier.author,
-                    identifier: identifier.identifier,
-                    record: identifier,
+                    title: info.title,
+                    author: info.author,
+                    identifier: info.identifier || match.identifier,
+                    record: info.record,
+                    reference: info.reference,
                 },
             });
-        } else if (identifier.type === 'zotero-link') {
-            intrigueDocument.commit('updateNode', {
-                id: props.id,
-                set: {
-                    title: undefined,
-                    author: undefined,
-                    identifier: identifier.identifier,
-                    record: identifier,
-                },
-            });
-        } else {
-            fetchLiteratureInfo(identifier.type, identifier.identifier).then((info) => {
-                console.log(`[IntrigueFlowNode][parseNoteContent@fetchLiteratureInfo] ${info}`);
-                intrigueDocument.commit('updateNode', {
-                    id: props.id,
-                    set: {
-                        title: info.title,
-                        author: info.author,
-                        identifier: info.identifier ? info.identifier : identifier.identifier,
-                        record: info,
-                    },
-                });
-            });
-        }
+        }).catch((err) => console.error('[IntrigueFlowNode][parseNoteContent@fetchReference]', err));
     }
 }
 
