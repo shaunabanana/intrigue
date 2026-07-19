@@ -87,6 +87,7 @@
             :id="node.id"
             :type="node.referenceType"
             :identifier="node.identifier"
+            :year="node.year"
             :title="node.title"
             :author="node.author"
             :reference="node.reference"
@@ -354,6 +355,7 @@ function parseNoteContent(content) {
                     title: info.title,
                     author: info.author,
                     identifier: info.identifier || match.identifier,
+                    year: info.year,
                     record: info.record,
                     reference: info.reference,
                 },

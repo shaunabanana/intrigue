@@ -1,10 +1,12 @@
 <template>
     <div class="reference-content" ref="reference" @dblclick.stop.prevent="showFullText">
-        <span class="title"> {{ title ? title : 'Fetching title...' }} </span> <br />
+        <span class="title"> {{ title ? title : 'Fetching title...' }}</span>
+        <br />
         <span class="authors">
+            {{ year ? year + " | " : '' }}
             {{ author ? formatAuthors(author) : 'Fetching authors...' }}
         </span>  <br />
-        <span class="identifier"> {{ identifier ? identifier : '' }} </span>
+        <span v-if="identifier" class="identifier"> {{ identifier || '' }} </span>
     </div>
 </template>
 
@@ -15,6 +17,7 @@ const props = defineProps({
     id: String,
     type: String,
     title: String,
+    year: Number,
     author: Array,
     identifier: String,
     reference: Object,
@@ -51,12 +54,14 @@ function showFullText() {
 
 .authors {
     font-weight: normal;
+    font-size: small;
     color: black;
 }
 
 .identifier {
     font-weight: normal;
     font-style: italic;
+    font-size: small;
     color: var(--node-stroke);
 }
 </style>
