@@ -3,12 +3,12 @@
 	"label": "Intrigue",
 	"creator": "Shengchen Zhang",
 	"target": "",
-	"minVersion": "1.0",
+	"minVersion": "1.1",
 	"maxVersion": "",
 	"priority": 400,
 	"inRepository": true,
 	"translatorType": 2,
-	"lastUpdated": "2022-08-13 17:06:27"
+	"lastUpdated": "2026-07-18 22:55:31"
 }
 
 function doExport() {
@@ -21,6 +21,7 @@ function doExport() {
 	var libraryId = item.libraryID ? item.libraryID : 0;
 	// data.source = 'zotero';
 	exportData.title = item.title;
+	exportData.year = Number.parseInt(Zotero.Utilities.strToDate(item.date).year);
 	exportData.author = item.creators.map(function (author) {
 		return {
 			given: author.firstName,
@@ -33,6 +34,7 @@ function doExport() {
 	}
 	Zotero.write(JSON.stringify(exportData));
 }
+
 /** BEGIN TEST CASES **/
 var testCases = [
 ]
