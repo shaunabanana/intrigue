@@ -97,7 +97,7 @@
             "hardenedRuntime": true,
             "entitlements": "build/entitlements.mac.plist",
             "entitlementsInherit": "build/entitlements.mac.inherit.plist",
-            "artifactName": "${productName}-macOS-${version}-${arch}.${ext}",
+            "artifactName": "${productName}-macOS-${arch}-${version}.${ext}",
             "target": [
                 {
                     "target": "dmg",
@@ -127,11 +127,11 @@
             ]
         },
         "nsis": {
-            "buildUniversalInstaller": true,
-            "artifactName": "${productName}-Windows-${version}-Setup.${ext}"
+            "buildUniversalInstaller": false,
+            "artifactName": "${productName}-Windows-${arch}-${version}.${ext}"
         },
         "linux": {
-            "artifactName": "${productName}-Linux-${version}-${arch}.${ext}",
+            "artifactName": "${productName}-Linux-${arch}-${version}.${ext}",
             "target": [
                 {
                     "target": "AppImage",
