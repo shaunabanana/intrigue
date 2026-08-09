@@ -16,6 +16,7 @@
             :pan-on-scroll="true"
             :zoom-activation-key-code="'Meta'"
             :zoom-on-double-click="false"
+            :min-zoom="0.25"
             fit-view-on-init
             @dblclick="onCanvasDoubleClick"
             @pane-click="onPaneClick"
