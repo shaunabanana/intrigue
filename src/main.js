@@ -7,6 +7,10 @@ import Modal from '@arco-design/web-vue/es/modal';
 import Space from '@arco-design/web-vue/es/space';
 import Spin from '@arco-design/web-vue/es/spin';
 import Textarea from '@arco-design/web-vue/es/textarea';
+import Form from '@arco-design/web-vue/es/form';
+import Radio from '@arco-design/web-vue/es/radio';
+import Tag from '@arco-design/web-vue/es/tag';
+import Icon from '@arco-design/web-vue/es/icon';
 import '@arco-design/web-vue/es/button/style/css';
 import '@arco-design/web-vue/es/card/style/css';
 import '@arco-design/web-vue/es/grid/style/css';
@@ -15,6 +19,9 @@ import '@arco-design/web-vue/es/modal/style/css';
 import '@arco-design/web-vue/es/space/style/css';
 import '@arco-design/web-vue/es/spin/style/css';
 import '@arco-design/web-vue/es/textarea/style/css';
+import '@arco-design/web-vue/es/form/style/css';
+import '@arco-design/web-vue/es/radio/style/css';
+import '@arco-design/web-vue/es/tag/style/css';
 
 import App from './App.vue';
 
@@ -28,5 +35,9 @@ app.use(Modal);
 app.use(Space);
 app.use(Spin);
 app.use(Textarea);
+app.use(Form);
+app.use(Radio);
+app.use(Tag);
+app.use(Icon);
 
 app.mount('#app');

@@ -44,6 +44,20 @@ contextBridge.exposeInMainWorld('intrigue', {
     onOpenSelection(callback) {
         return on('open-selection', callback);
     },
+    onOpenPreferences(callback) {
+        return on('open-preferences', callback);
+    },
+    settings: {
+        get(key) {
+            return ipcRenderer.invoke('settings:get', key);
+        },
+        set(key, value) {
+            return ipcRenderer.invoke('settings:set', key, value);
+        },
+        delete(key) {
+            return ipcRenderer.invoke('settings:delete', key);
+        },
+    },
     files: {
         access(filePath) {
             return ipcRenderer.invoke('file:access', filePath);

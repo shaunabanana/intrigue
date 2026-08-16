@@ -225,6 +225,7 @@ export const menuTemplate = [
             {
                 label: 'Preferences...',
                 accelerator: 'CommandOrControl+,',
+                click: () => windowManager.openPreferences(),
             },
             { role: 'services' },
             { type: 'separator' },

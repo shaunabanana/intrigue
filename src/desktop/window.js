@@ -368,6 +368,33 @@ export class EditorWindowManager {
             }
         });
     }
+
+    // eslint-disable-next-line class-methods-use-this
+    openPreferences() {
+        const parentWindow = BrowserWindow.getFocusedWindow();
+        const prefWindow = new BrowserWindow({
+            width: 560,
+            height: 100,
+            title: 'Preferences',
+            parent: parentWindow || undefined,
+            // modal: Boolean(parentWindow),
+            resizable: false,
+            minimizable: false,
+            maximizable: false,
+            webPreferences: {
+                preload: join(__dirname, '../preload/preload.js'),
+                nodeIntegration: false,
+                contextIsolation: true,
+                sandbox: true,
+            },
+        });
+
+        if (process.env.ELECTRON_RENDERER_URL) {
+            prefWindow.loadURL(`${process.env.ELECTRON_RENDERER_URL}/preferences.html`);
+        } else {
+            prefWindow.loadFile(join(__dirname, '../renderer/preferences.html'));
+        }
+    }
 }
 
 export const windowManager = new EditorWindowManager();

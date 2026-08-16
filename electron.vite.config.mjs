@@ -15,8 +15,12 @@ export default defineConfig({
             dedupe: ['yjs', 'lib0'],
         },
         build: {
+            externalizeDeps: false,
             rollupOptions: {
                 input: resolve(src, 'background.js'),
+                output: {
+                    format: 'es',
+                },
             },
         },
     },
@@ -39,7 +43,10 @@ export default defineConfig({
         },
         build: {
             rollupOptions: {
-                input: resolve(root, 'index.html'),
+                input: {
+                    index: resolve(root, 'index.html'),
+                    preferences: resolve(root, 'preferences.html'),
+                },
             },
         },
     },
