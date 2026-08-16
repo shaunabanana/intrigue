@@ -1,5 +1,6 @@
 <template>
-    <a-form :model="settings">
+    <a-spin v-if="!ready" :loading="true" class="preferences-loading" />
+    <a-form v-else :model="settings">
         <a-form-item field="colorScheme" label="Color scheme">
             <a-radio-group v-model="settings.colorScheme" default-value="light">
                 <a-radio value="system">
@@ -37,12 +38,10 @@
     </a-form>
 </template>
 
-<!-- eslint-disable no-unused-vars -->
 <script setup>
 import useSettings from '@/composables/useSettings';
 
-const settings = useSettings();
+const { settings, ready } = useSettings();
 </script>
-<!-- eslint-enable no-unused-vars -->
 
 <style scoped></style>

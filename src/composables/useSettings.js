@@ -1,4 +1,4 @@
-import { useStorage } from '@vueuse/core';
+import { ref, watch, onMounted } from 'vue';
 
 const STORAGE_KEY = 'intrigue-settings';
 
@@ -11,24 +11,40 @@ function createSettingsStorage() {
 
     if (isElectron) {
         return {
-            getItem() {
-                return window.intrigue.settings.get(STORAGE_KEY);
-            },
-            setItem(_, value) {
-                window.intrigue.settings.set(STORAGE_KEY, value);
-            },
-            removeItem() {
-                window.intrigue.settings.delete(STORAGE_KEY);
-            },
+            getItem: () => window.intrigue.settings.get(STORAGE_KEY),
+            setItem: (value) => window.intrigue.settings.set(STORAGE_KEY, value),
         };
     }
 
-    return localStorage;
+    return {
+        getItem: () => localStorage.getItem(STORAGE_KEY),
+        setItem: (value) => {
+            localStorage.setItem(STORAGE_KEY, value);
+        },
+    };
 }
 
 const useSettings = () => {
     const storage = createSettingsStorage();
-    return useStorage(STORAGE_KEY, defaultSettings, storage);
+    const settings = ref({ ...defaultSettings });
+    const ready = ref(false);
+
+    onMounted(async () => {
+        try {
+            const raw = await storage.getItem();
+            if (raw != null) settings.value = { ...defaultSettings, ...JSON.parse(raw) };
+        } catch (error) {
+            console.error(error);
+        } finally {
+            ready.value = true;
+        }
+    });
+
+    watch(settings, (value) => {
+        storage.setItem(JSON.stringify(value));
+    }, { deep: true });
+
+    return { settings, ready };
 };
 
 export default useSettings;

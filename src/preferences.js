@@ -8,6 +8,8 @@ import '@arco-design/web-vue/es/tag/style/css';
 import Icon from '@arco-design/web-vue/es/icon';
 import Space from '@arco-design/web-vue/es/space';
 import '@arco-design/web-vue/es/space/style/css';
+import Spin from '@arco-design/web-vue/es/spin';
+import '@arco-design/web-vue/es/spin/style/css';
 
 import PreferencesContent from './components/PreferencesContent.vue';
 
@@ -20,5 +22,6 @@ app.use(Radio);
 app.use(Tag);
 app.use(Icon);
 app.use(Space);
+app.use(Spin);
 
 app.mount('#preferences');

@@ -10,3 +10,10 @@ body,
         'Segoe UI', sans-serif;
     background: var(--background);
 }
+
+.preferences-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+}
