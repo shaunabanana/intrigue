@@ -97,10 +97,10 @@ html[data-theme='dark'] {
     --chip-shadow: rgba(0, 0, 0, 0.4);
 
     /* Text */
-    --text-primary: rgba(255, 255, 255, 0.88);
-    --text-secondary: rgba(255, 255, 255, 0.64);
-    --text-tertiary: rgba(255, 255, 255, 0.56);
-    --text-placeholder: rgba(255, 255, 255, 0.36);
+    --text-primary: rgba(255, 255, 255, 0.98);
+    --text-secondary: rgba(255, 255, 255, 0.74);
+    --text-tertiary: rgba(255, 255, 255, 0.66);
+    --text-placeholder: rgba(255, 255, 255, 0.46);
 
     /* Accent pink reads well on both backgrounds — unchanged */
 
@@ -109,17 +109,17 @@ html[data-theme='dark'] {
 
     /* Node palette — notes (muted dark fills, slightly lightened strokes) */
     --node-note-red-stroke: #8B5E5F;
-    --node-note-red-fill: #453436;
+    --node-note-red-fill: #3A2D2F;
     --node-note-orange-stroke: #89624D;
-    --node-note-orange-fill: #44362E;
+    --node-note-orange-fill: #392E29;
     --node-note-yellow-stroke: #806844;
-    --node-note-yellow-fill: #41382B;
+    --node-note-yellow-fill: #373026;
     --node-note-green-stroke: #61734E;
-    --node-note-green-fill: #353D2F;
+    --node-note-green-fill: #2D332A;
     --node-note-blue-stroke: #4F708C;
-    --node-note-blue-fill: #2D3B48;
+    --node-note-blue-fill: #28323C;
     --node-note-purple-stroke: #815F7D;
-    --node-note-purple-fill: #413542;
+    --node-note-purple-fill: #372D38;
 
     /* Node palette — references */
     --node-ref-red-stroke: #975561;

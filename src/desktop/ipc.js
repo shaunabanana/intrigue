@@ -39,8 +39,18 @@ ipcMain.handle('settings:get', (_, key) => {
     return value === undefined ? null : value;
 });
 
-ipcMain.handle('settings:set', (_, key, value) => {
+ipcMain.handle('settings:set', (event, key, value) => {
     settingsStore.set(key, value);
+    // Keep every other window in sync. Each BrowserWindow is its own renderer
+    // process (and thus its own useSettings singleton), so a change made in one
+    // window — e.g. the color scheme in the preferences window — must be pushed
+    // to the rest, such as the open document windows, so their themes update.
+    const senderWindow = BrowserWindow.fromWebContents(event.sender);
+    BrowserWindow.getAllWindows().forEach((win) => {
+        if (win && !win.isDestroyed() && win !== senderWindow) {
+            win.webContents.send('settings:changed', key, value);
+        }
+    });
     return true;
 });
 

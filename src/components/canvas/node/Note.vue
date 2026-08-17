@@ -102,6 +102,7 @@ watch(() => props.editing, () => {
     box-shadow: none;
     border-color: transparent;
     display: block;
+    color: var(--text-primary);
     font-size: 14px;
     line-height: 1.35;
     transform: translateY(1px);

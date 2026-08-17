@@ -6,12 +6,18 @@
             {{ year ? year + " | " : '' }}
             {{ author ? formatAuthors(author) : 'Fetching authors...' }}
         </span>  <br />
-        <span v-if="identifier" class="identifier"> {{ identifier || '' }} </span>
+        <span
+            v-if="identifier && (settings.refLink === 'show' || !ready)"
+            class="identifier"
+        >
+            {{ identifier || '' }}
+        </span>
     </div>
 </template>
 
 <script setup>
 import { getReferenceOpenUrl } from '@/literature';
+import useSettings from '@/composables/useSettings';
 
 const props = defineProps({
     id: String,
@@ -22,6 +28,8 @@ const props = defineProps({
     identifier: String,
     reference: Object,
 });
+
+const { ready, settings } = useSettings();
 
 function formatAuthors(authors) {
     let authorsString = '';

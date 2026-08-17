@@ -47,6 +47,9 @@ contextBridge.exposeInMainWorld('intrigue', {
     onOpenPreferences(callback) {
         return on('open-preferences', callback);
     },
+    onSettingsChanged(callback) {
+        return on('settings:changed', callback);
+    },
     settings: {
         get(key) {
             return ipcRenderer.invoke('settings:get', key);
