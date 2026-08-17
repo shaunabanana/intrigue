@@ -63,6 +63,10 @@
             </a-col>
             <a-col :span="8" align="right" style="padding-right: 0.5rem">
                 <a-space>
+                <a-button
+                    size="small"
+                    @click="openPreferences"
+                >Settings</a-button>
                 <CopyButton
                     size="small"
                     :get-text="createShareLink"
@@ -81,6 +85,7 @@
             If Intrigue did not open, continue in browser or install the desktop app.
         </div>
     </div>
+    <PreferencesModal ref="preferencesModalRef"/>
 </template>
 
 <script setup>
@@ -96,6 +101,7 @@ import {
     parseIntrigueUrl,
 } from '@/utils/links';
 import CopyButton from './CopyButton.vue';
+import PreferencesModal from '@/components/PreferencesModal.vue';
 
 const store = inject('store');
 const document = inject('document');
@@ -107,6 +113,8 @@ const newFile = ref(false);
 const canUndo = ref(document.canUndo());
 const canRedo = ref(document.canRedo());
 const showOpenFallback = ref(false);
+const preferencesModalRef = ref(null);
+
 let cleanupHistoryListener = null;
 let openFallbackTimer = null;
 
@@ -118,6 +126,10 @@ const shareButtonLabel = computed(() => (hasSelectedElements.value ? 'Share Sele
 function updateHistoryState() {
     canUndo.value = document.canUndo();
     canRedo.value = document.canRedo();
+}
+
+function openPreferences() {
+    preferencesModalRef.value?.open();
 }
 
 function createShareAnchor(selectionIds) {

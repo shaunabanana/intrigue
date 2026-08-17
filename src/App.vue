@@ -2,7 +2,6 @@
     <TitleBar />
     <DocumentCanvas />
     <Debug v-if="debug"/>
-    <PreferencesModal ref="preferencesModalRef" />
     <div v-if="appState.loading" class="loading-overlay">
         <a-spin :size="36" />
         <div class="loading-text">Opening document...</div>
@@ -30,7 +29,6 @@ import { parseIntrigueUrl } from '@/utils/links';
 import TitleBar from '@/components/window/TitleBar.vue';
 import DocumentCanvas from '@/components/canvas/VueFlowCanvas.vue';
 import Debug from '@/components/utils/Debug.vue';
-import PreferencesModal from '@/components/PreferencesModal.vue';
 
 import useTheme from '@/composables/useTheme';
 
@@ -49,7 +47,6 @@ const filePath = ref(undefined);
 const selectedElementIds = ref([]);
 const openSelectionTarget = ref(null);
 const { state, send } = useMachine(intrigueMachine);
-const preferencesModalRef = ref(null);
 const electron = Boolean(window.intrigue?.isElectron);
 const electronListenerCleanup = [];
 
@@ -76,13 +73,6 @@ function broadcastUsername() {
 function preventSpaceScroll(event) {
     if (event.code === 'Space' && event.target === document.body) {
         event.preventDefault();
-    }
-}
-
-function handlePreferencesKeydown(event) {
-    if ((event.metaKey || event.ctrlKey) && event.key === ',') {
-        event.preventDefault();
-        preferencesModalRef.value?.open();
     }
 }
 
@@ -150,9 +140,6 @@ onMounted(() => {
 
     // Prevent space from causing scrolling down behavior.
     window.addEventListener('keydown', preventSpaceScroll);
-
-    // Preferences keyboard shortcut (Cmd/Ctrl+,)
-    window.addEventListener('keydown', handlePreferencesKeydown);
 
     if (electron) {
         electronListenerCleanup.push(window.intrigue.onOpenPreferences(() => {
@@ -224,7 +211,6 @@ onMounted(() => {
 onBeforeUnmount(() => {
     console.log('[App][beforeUnmount] Closing document...');
     window.removeEventListener('keydown', preventSpaceScroll);
-    window.removeEventListener('keydown', handlePreferencesKeydown);
     electronListenerCleanup.forEach((cleanup) => cleanup());
     intrigueDocument.close();
     console.log('[App][beforeUnmount] Document closed.');
