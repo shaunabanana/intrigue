@@ -21,7 +21,7 @@ function setSelectionParams(url, { shareId, selectionIds } = {}) {
 }
 
 function assertUrlLength(url) {
-    const text = url.toString();
+    const text = encodeURI(url.toString());
     if (text.length > maxShareUrlLength) {
         throw new Error('The share URL is too long to copy safely.');
     }

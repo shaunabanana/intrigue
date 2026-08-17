@@ -43,7 +43,18 @@ async function copy() {
         return;
     }
 
-    if (ultralightCopy(text)) {
+    let ok = false;
+    if (navigator.clipboard?.writeText) {
+        try {
+            await navigator.clipboard.writeText(text);
+            ok = true;
+        } catch (error) {
+            ok = false;
+        }
+    }
+    if (!ok) ok = ultralightCopy(text);
+
+    if (ok) {
         copied.value = true;
         if (timer) clearTimeout(timer);
         timer = setTimeout(() => {
