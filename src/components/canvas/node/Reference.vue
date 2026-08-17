@@ -49,13 +49,13 @@ function showFullText() {
 <style scoped>
 .title {
     font-weight: bold;
-    color: black;
+    color: var(--text-primary);
 }
 
 .authors {
     font-weight: normal;
     font-size: small;
-    color: black;
+    color: var(--text-primary);
 }
 
 .identifier {

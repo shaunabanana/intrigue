@@ -1,0 +1,224 @@
+/* ============================================================
+   Intrigue design tokens — single source of truth for colors.
+
+   Light values live on :root, dark values under
+   html[data-theme='dark']. useTheme.js (src/composables/useTheme.js)
+   sets data-theme on <html> and arco-theme on <body> from the
+   persisted colorScheme setting.
+
+   Arco Design Vue and VueFlow overrides live at the bottom of this
+   file. Keep all color decisions here — components should only
+   reference these tokens (var(--...)), never raw colors.
+
+   Note: overrides use higher-specificity selectors (html body,
+   html[data-theme='dark'], html .vue-flow__*) so they win over
+   Arco/VueFlow defaults regardless of stylesheet import order.
+   ============================================================ */
+
+:root {
+    /* Surfaces */
+    --background: #F8F9F9;
+    --surface: #FFFFFF;
+    --surface-translucent: rgba(248, 249, 249, 0.78);
+    --chip-bg: rgba(255, 255, 255, 0.9);
+    --chip-border: rgba(116, 122, 128, 0.18);
+    --chip-shadow: rgba(25, 29, 33, 0.08);
+
+    /* Text */
+    --text-primary: #2C3034;
+    --text-secondary: rgba(60, 65, 70, 0.82);
+    --text-tertiary: rgba(60, 65, 70, 0.72);
+    --text-placeholder: #ADB5BD;
+
+    /* Accent */
+    --highlight-border: rgb(255, 112, 143);
+    --highlight-border-soft: rgba(255, 112, 143, 0.82);
+    --highlight-fill-soft: rgba(255, 112, 143, 0.12);
+    --highlight-glow: rgba(255, 112, 143, 0.08);
+
+    /* Edges and selection */
+    --edge-color: #9A9A9B;
+    --edge-selected-color: var(--highlight-border);
+    --remote-selection-color: gray;
+
+    /* Node palette — notes */
+    --node-note-red-stroke: #FFA4A5;
+    --node-note-red-fill: #FFECEC;
+    --node-note-orange-stroke: #FAAC80;
+    --node-note-orange-fill: #FFEEE2;
+    --node-note-yellow-stroke: #E9B76D;
+    --node-note-yellow-fill: #FAF8E5;
+    --node-note-green-stroke: #ACCF82;
+    --node-note-green-fill: #EAF6E6;
+    --node-note-blue-stroke: #86C8FF;
+    --node-note-blue-fill: #E5F4FF;
+    --node-note-purple-stroke: #EAA7E0;
+    --node-note-purple-fill: #FCECF9;
+
+    /* Node palette — references */
+    --node-ref-red-stroke: #EC7D90;
+    --node-ref-red-fill: #F9D5D9;
+    --node-ref-orange-stroke: #E8884F;
+    --node-ref-orange-fill: #F7D9C8;
+    --node-ref-yellow-stroke: #D19926;
+    --node-ref-yellow-fill: #FAEABF;
+    --node-ref-green-stroke: #7DB75B;
+    --node-ref-green-fill: #D4E6CB;
+    --node-ref-blue-stroke: #5BA9F7;
+    --node-ref-blue-fill: #CBE3FA;
+    --node-ref-purple-stroke: #D483CD;
+    --node-ref-purple-fill: #F0D7ED;
+
+    /* Canvas chrome */
+    --resize-line: rgba(0, 0, 0, 0.15);
+    --help-border: rgba(116, 122, 128, 0.12);
+    --help-shadow: rgba(25, 29, 33, 0.06);
+    --help-key-color: rgba(50, 55, 60, 0.78);
+    --help-key-bg: rgba(255, 255, 255, 0.74);
+    --help-key-border: rgba(88, 94, 100, 0.16);
+    --help-key-shadow: rgba(88, 94, 100, 0.1);
+    --loading-bg: rgba(248, 249, 249, 0.86);
+    --canvas-dot: #8F949A;
+
+    /* VueFlow controls (minimap/zoom buttons) */
+    --control-bg: #FEFEFE;
+    --control-bg-hover: #F4F4F4;
+    --control-border: #EEEEEE;
+    --control-shadow: rgba(0, 0, 0, 0.08);
+}
+
+html[data-theme='dark'] {
+    /* Surfaces */
+    --background: #17181A;
+    --surface: #1F2023;
+    --surface-translucent: rgba(31, 32, 35, 0.78);
+    --chip-bg: rgba(39, 40, 43, 0.9);
+    --chip-border: rgba(255, 255, 255, 0.16);
+    --chip-shadow: rgba(0, 0, 0, 0.4);
+
+    /* Text */
+    --text-primary: rgba(255, 255, 255, 0.88);
+    --text-secondary: rgba(255, 255, 255, 0.64);
+    --text-tertiary: rgba(255, 255, 255, 0.56);
+    --text-placeholder: rgba(255, 255, 255, 0.36);
+
+    /* Accent pink reads well on both backgrounds — unchanged */
+
+    /* Edges and selection */
+    --edge-color: #8A8F98;
+
+    /* Node palette — notes (muted dark fills, slightly lightened strokes) */
+    --node-note-red-stroke: #8B5E5F;
+    --node-note-red-fill: #453436;
+    --node-note-orange-stroke: #89624D;
+    --node-note-orange-fill: #44362E;
+    --node-note-yellow-stroke: #806844;
+    --node-note-yellow-fill: #41382B;
+    --node-note-green-stroke: #61734E;
+    --node-note-green-fill: #353D2F;
+    --node-note-blue-stroke: #4F708C;
+    --node-note-blue-fill: #2D3B48;
+    --node-note-purple-stroke: #815F7D;
+    --node-note-purple-fill: #413542;
+
+    /* Node palette — references */
+    --node-ref-red-stroke: #975561;
+    --node-ref-red-fill: #623B44;
+    --node-ref-orange-stroke: #945B3A;
+    --node-ref-orange-fill: #603F2C;
+    --node-ref-yellow-stroke: #876521;
+    --node-ref-yellow-fill: #58451E;
+    --node-ref-green-stroke: #547741;
+    --node-ref-green-fill: #3B5031;
+    --node-ref-blue-stroke: #406F9F;
+    --node-ref-blue-fill: #2F4B67;
+    --node-ref-purple-stroke: #885885;
+    --node-ref-purple-fill: #593D59;
+
+    /* Canvas chrome */
+    --resize-line: rgba(255, 255, 255, 0.18);
+    --help-border: rgba(255, 255, 255, 0.12);
+    --help-shadow: rgba(0, 0, 0, 0.4);
+    --help-key-color: rgba(255, 255, 255, 0.7);
+    --help-key-bg: rgba(255, 255, 255, 0.1);
+    --help-key-border: rgba(255, 255, 255, 0.16);
+    --help-key-shadow: rgba(0, 0, 0, 0.3);
+    --loading-bg: rgba(23, 24, 26, 0.86);
+    --canvas-dot: #4A4F57;
+
+    /* VueFlow controls */
+    --control-bg: #26272A;
+    --control-bg-hover: #2C2D30;
+    --control-border: rgba(255, 255, 255, 0.1);
+    --control-shadow: rgba(0, 0, 0, 0.4);
+
+    /* VueFlow theme variables (defined on :root by @vue-flow/core) */
+    --vf-node-bg: var(--surface);
+    --vf-connection-path: var(--edge-color);
+}
+
+/* ============================================================
+   Arco Design Vue overrides
+   ============================================================ */
+
+/* Pink accent scale (both modes). Arco expects RGB triplets.
+   Base is the app highlight color rgb(255, 112, 143). */
+html body {
+    --primary-1: 255, 240, 243;
+    --primary-2: 255, 214, 223;
+    --primary-3: 255, 184, 199;
+    --primary-4: 255, 154, 176;
+    --primary-5: 255, 130, 161;
+    --primary-6: 255, 112, 143;
+    --primary-7: 224, 96, 125;
+    --primary-8: 194, 81, 107;
+    --primary-9: 163, 67, 88;
+    --primary-10: 133, 54, 71;
+
+    --link-1: 255, 240, 243;
+    --link-2: 255, 214, 223;
+    --link-3: 255, 184, 199;
+    --link-4: 255, 154, 176;
+    --link-5: 255, 130, 161;
+    --link-6: 255, 112, 143;
+    --link-7: 224, 96, 125;
+    --link-8: 194, 81, 107;
+    --link-9: 163, 67, 88;
+    --link-10: 133, 54, 71;
+}
+
+/* Dark mode — align Arco surfaces with the app canvas. */
+html body[arco-theme='dark'] {
+    --color-bg-1: #17181A;
+    --color-bg-2: #1F2023;
+    --color-bg-3: #26272A;
+    --color-bg-4: #2C2D30;
+    --color-bg-5: #313236;
+}
+
+/* ============================================================
+    VueFlow overrides (minimap/controls ship hardcoded colors)
+    ============================================================ */
+
+/* Canvas background dots render a hard-coded fill attribute; CSS fill
+   supports var() and overrides the presentation attribute. */
+html .vue-flow__background circle {
+    fill: var(--canvas-dot);
+}
+
+html .vue-flow__minimap {
+    background-color: var(--surface);
+}
+
+html .vue-flow__controls {
+    box-shadow: 0 0 2px 1px var(--control-shadow);
+}
+
+html .vue-flow__controls-button {
+    background: var(--control-bg);
+    border-bottom-color: var(--control-border);
+}
+
+html .vue-flow__controls-button:hover {
+    background: var(--control-bg-hover);
+}

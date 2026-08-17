@@ -32,6 +32,10 @@ import DocumentCanvas from '@/components/canvas/VueFlowCanvas.vue';
 import Debug from '@/components/utils/Debug.vue';
 import PreferencesModal from '@/components/PreferencesModal.vue';
 
+import useTheme from '@/composables/useTheme';
+
+useTheme();
+
 const intrigueDocument = new IntrigueDocument();
 const store = computed(() => intrigueDocument.store);
 const appState = reactive({
@@ -244,8 +248,6 @@ watch(() => intrigueDocument.store.metadata.name, () => {
 html,
 body,
 #app {
-    --background: #F8F9F9;
-    --highlight-border: rgb(255, 112, 143);
     width: 100%;
     height: 100%;
     overflow: hidden;
@@ -264,7 +266,7 @@ body,
     align-items: center;
     gap: 0.75rem;
     color: var(--highlight-border);
-    background: rgba(248, 249, 249, 0.86);
+    background: var(--loading-bg);
     backdrop-filter: blur(6px);
 }
 
@@ -274,7 +276,7 @@ body,
 }
 
 .loading-text {
-    color: rgba(60, 65, 70, 0.72);
+    color: var(--text-tertiary);
     font-size: 0.86rem;
 }
 

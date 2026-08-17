@@ -8,8 +8,7 @@
     <path
         class="intrigue-flow-edge-arrow"
         :d="arrowPath"
-        :fill="edgeColor"
-        :stroke="edgeColor"
+        :style="{ fill: edgeColor, stroke: edgeColor }"
         stroke-width="1"
         stroke-linejoin="round"
         stroke-linecap="round"
@@ -100,7 +99,7 @@ const path = computed(() => getBezierPath({
     curvature,
 })[0]);
 
-const edgeColor = computed(() => props.style.stroke || '#9A9A9B');
+const edgeColor = computed(() => props.style.stroke || 'var(--edge-color)');
 
 const arrowPath = computed(() => {
     const [sourceControlX, sourceControlY] = getControlWithCurvature(

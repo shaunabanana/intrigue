@@ -40,8 +40,11 @@
 
 <script setup>
 import useSettings from '@/composables/useSettings';
+import useTheme from '@/composables/useTheme';
 
 const { settings, ready } = useSettings();
+
+useTheme();
 </script>
 
 <style scoped></style>

@@ -23,6 +23,8 @@ import '@arco-design/web-vue/es/form/style/css';
 import '@arco-design/web-vue/es/radio/style/css';
 import '@arco-design/web-vue/es/tag/style/css';
 
+import './theme.css';
+
 import App from './App.vue';
 
 const app = createApp(App);

@@ -223,11 +223,11 @@ onBeforeUnmount(() => {
     right: 0.5rem;
     z-index: 10000;
     padding: 0.35rem 0.55rem;
-    color: rgba(60, 65, 70, 0.82);
+    color: var(--text-secondary);
     font-size: 0.75rem;
-    background: rgba(255, 255, 255, 0.9);
-    border: 1px solid rgba(116, 122, 128, 0.18);
+    background: var(--chip-bg);
+    border: 1px solid var(--chip-border);
     border-radius: 0.45rem;
-    box-shadow: 0 8px 20px rgba(25, 29, 33, 0.08);
+    box-shadow: 0 8px 20px var(--chip-shadow);
 }
 </style>

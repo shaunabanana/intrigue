@@ -150,7 +150,7 @@ watch(() => props.editing, () => {
     content: attr(data-placeholder);
     float: left;
     /* color: #adb5bd; */
-    color: var(--va-gray);
+    color: var(--text-placeholder);
     pointer-events: none;
     height: 0;
 }

@@ -183,54 +183,54 @@ const defaultColor = {
 const colors = {
     note: {
         red: {
-            stroke: '#FFA4A5',
-            fill: '#FFECEC',
+            stroke: 'var(--node-note-red-stroke)',
+            fill: 'var(--node-note-red-fill)',
         },
         orange: {
-            stroke: '#FAAC80',
-            fill: '#FFEEE2',
+            stroke: 'var(--node-note-orange-stroke)',
+            fill: 'var(--node-note-orange-fill)',
         },
         yellow: {
-            stroke: '#E9B76D',
-            fill: '#FAF8E5',
+            stroke: 'var(--node-note-yellow-stroke)',
+            fill: 'var(--node-note-yellow-fill)',
         },
         green: {
-            stroke: '#ACCF82',
-            fill: '#EAF6E6',
+            stroke: 'var(--node-note-green-stroke)',
+            fill: 'var(--node-note-green-fill)',
         },
         blue: {
-            stroke: '#86C8FF',
-            fill: '#E5F4FF',
+            stroke: 'var(--node-note-blue-stroke)',
+            fill: 'var(--node-note-blue-fill)',
         },
         purple: {
-            stroke: '#EAA7E0',
-            fill: '#FCECF9',
+            stroke: 'var(--node-note-purple-stroke)',
+            fill: 'var(--node-note-purple-fill)',
         },
     },
     reference: {
         red: {
-            stroke: '#EC7D90',
-            fill: '#F9D5D9',
+            stroke: 'var(--node-ref-red-stroke)',
+            fill: 'var(--node-ref-red-fill)',
         },
         orange: {
-            stroke: '#E8884F',
-            fill: '#F7D9C8',
+            stroke: 'var(--node-ref-orange-stroke)',
+            fill: 'var(--node-ref-orange-fill)',
         },
         yellow: {
-            stroke: '#D19926',
-            fill: '#FAEABF',
+            stroke: 'var(--node-ref-yellow-stroke)',
+            fill: 'var(--node-ref-yellow-fill)',
         },
         green: {
-            stroke: '#7DB75B',
-            fill: '#D4E6CB',
+            stroke: 'var(--node-ref-green-stroke)',
+            fill: 'var(--node-ref-green-fill)',
         },
         blue: {
-            stroke: '#5BA9F7',
-            fill: '#CBE3FA',
+            stroke: 'var(--node-ref-blue-stroke)',
+            fill: 'var(--node-ref-blue-fill)',
         },
         purple: {
-            stroke: '#D483CD',
-            fill: '#F0D7ED',
+            stroke: 'var(--node-ref-purple-stroke)',
+            fill: 'var(--node-ref-purple-fill)',
         },
     },
 };
@@ -406,7 +406,7 @@ watch(() => node.value.w, () => {
 .intrigue-flow-node .intrigue-handle {
     width: 6px;
     height: 6px;
-    border: 1px solid white;
+    border: 1px solid var(--surface);
     background: var(--node-stroke);
     opacity: 0;
     transition: opacity 0.12s ease;
@@ -426,7 +426,7 @@ watch(() => node.value.w, () => {
 }
 
 .intrigue-flow-node.selected .intrigue-handle {
-    background: rgb(255, 112, 143);
+    background: var(--highlight-border);
 }
 
 .intrigue-flow-node .intrigue-handle-right {
@@ -454,8 +454,8 @@ watch(() => node.value.w, () => {
     min-height: 12px;
     transform: translateY(-50%);
     border: 0;
-    border-right: 1px solid rgba(0, 0, 0, 0.15);
-    border-left: 1px solid rgba(0, 0, 0, 0.15);
+    border-right: 1px solid var(--resize-line);
+    border-left: 1px solid var(--resize-line);
     background: transparent;
     cursor: ew-resize;
     z-index: 20;
@@ -505,7 +505,7 @@ watch(() => node.value.w, () => {
 }
 
 .intrigue-flow-node.selected {
-    border-color: rgb(255, 112, 143) !important;
+    border-color: var(--highlight-border) !important;
 }
 
 .intrigue-flow-node.snap-top {
@@ -547,7 +547,7 @@ watch(() => node.value.w, () => {
 .intrigue-flow-node.remote-selected {
     margin: -2px;
     border: 2px solid;
-    border-color: gray !important;
+    border-color: var(--remote-selection-color) !important;
     cursor: default;
     pointer-events: none;
 }

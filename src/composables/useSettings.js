@@ -1,4 +1,4 @@
-import { ref, watch, onMounted } from 'vue';
+import { ref, watch } from 'vue';
 
 const STORAGE_KEY = 'intrigue-settings';
 
@@ -24,27 +24,28 @@ function createSettingsStorage() {
     };
 }
 
-const useSettings = () => {
-    const storage = createSettingsStorage();
-    const settings = ref({ ...defaultSettings });
-    const ready = ref(false);
+// Module-level singleton: every consumer (the preferences UI and the theme
+// composable) shares the same reactive settings so a change in one is visible
+// to the other. State is loaded once, on first import.
+const storage = createSettingsStorage();
+const settings = ref({ ...defaultSettings });
+const ready = ref(false);
 
-    onMounted(async () => {
-        try {
-            const raw = await storage.getItem();
-            if (raw != null) settings.value = { ...defaultSettings, ...JSON.parse(raw) };
-        } catch (error) {
-            console.error(error);
-        } finally {
-            ready.value = true;
-        }
-    });
+(async () => {
+    try {
+        const raw = await storage.getItem();
+        if (raw != null) settings.value = { ...defaultSettings, ...JSON.parse(raw) };
+    } catch (error) {
+        console.error(error);
+    } finally {
+        ready.value = true;
+    }
+})();
 
-    watch(settings, (value) => {
-        storage.setItem(JSON.stringify(value));
-    }, { deep: true });
+watch(settings, (value) => {
+    storage.setItem(JSON.stringify(value));
+}, { deep: true });
 
-    return { settings, ready };
-};
+const useSettings = () => ({ settings, ready });
 
 export default useSettings;

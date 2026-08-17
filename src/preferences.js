@@ -13,6 +13,7 @@ import '@arco-design/web-vue/es/spin/style/css';
 
 import PreferencesContent from './components/PreferencesContent.vue';
 
+import './theme.css';
 import './preferences.css';
 
 const app = createApp(PreferencesContent);

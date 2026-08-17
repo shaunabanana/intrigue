@@ -40,7 +40,7 @@ defineProps({
 
 .avatar {
     transform: translate(4px, -10px);
-    border: 2px solid white;
+    border: 2px solid var(--surface);
     border-radius: 100%;
     box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.3);
 }

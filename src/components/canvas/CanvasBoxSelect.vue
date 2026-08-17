@@ -242,10 +242,10 @@ onBeforeUnmount(() => {
     position: fixed;
     z-index: 900;
     pointer-events: none;
-    border: 1px solid rgba(255, 112, 143, 0.82);
+    border: 1px solid var(--highlight-border-soft);
     border-radius: 0.45rem;
-    background: rgba(255, 112, 143, 0.12);
-    box-shadow: 0 0 0 1px rgba(255, 112, 143, 0.08),
-        inset 0 0 20px rgba(255, 112, 143, 0.08);
+    background: var(--highlight-fill-soft);
+    box-shadow: 0 0 0 1px var(--highlight-glow),
+        inset 0 0 20px var(--highlight-glow);
 }
 </style>

@@ -130,9 +130,9 @@ const nodeTypes = {
 const edgeTypes = {
     intrigue: markRaw(IntrigueFlowEdge),
 };
-const edgeColor = '#9A9A9B';
-const selectedEdgeColor = 'rgb(255, 112, 143)';
-const remoteSelectedEdgeColor = 'gray';
+const edgeColor = 'var(--edge-color)';
+const selectedEdgeColor = 'var(--highlight-border)';
+const remoteSelectedEdgeColor = 'var(--remote-selection-color)';
 const remoteSelectionTimeout = 8000;
 const platform = window.navigator.platform || window.navigator.userAgent || '';
 const isApplePlatform = /Mac|iPhone|iPad|iPod/.test(platform);
@@ -1142,15 +1142,15 @@ onBeforeUnmount(() => {
     gap: 0.34rem 0.62rem;
     max-width: min(44rem, calc(100vw - 2rem));
     padding: 0.34rem 0.56rem;
-    color: rgba(70, 75, 80, 0.72);
+    color: var(--text-tertiary);
     font-size: 0.72rem;
     line-height: 1.4;
     text-align: center;
     pointer-events: none;
-    background: rgba(248, 249, 249, 0.78);
-    border: 1px solid rgba(116, 122, 128, 0.12);
+    background: var(--surface-translucent);
+    border: 1px solid var(--help-border);
     border-radius: 999px;
-    box-shadow: 0 8px 22px rgba(25, 29, 33, 0.06);
+    box-shadow: 0 8px 22px var(--help-shadow);
     transform: translateX(-50%);
     backdrop-filter: blur(8px);
 }
@@ -1164,14 +1164,14 @@ onBeforeUnmount(() => {
 
 .contextual-help-key {
     padding: 0.01rem 0.2rem;
-    color: rgba(50, 55, 60, 0.78);
+    color: var(--help-key-color);
     font: inherit;
     font-size: 0.66rem;
     line-height: 1.28;
-    background: rgba(255, 255, 255, 0.74);
-    border: 1px solid rgba(88, 94, 100, 0.16);
+    background: var(--help-key-bg);
+    border: 1px solid var(--help-key-border);
     border-radius: 0.32rem;
-    box-shadow: 0 1px 0 rgba(88, 94, 100, 0.10);
+    box-shadow: 0 1px 0 var(--help-key-shadow);
 }
 
 @media (max-width: 640px) {
