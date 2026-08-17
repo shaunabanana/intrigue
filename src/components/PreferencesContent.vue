@@ -59,6 +59,30 @@
                 </a-radio>
             </a-radio-group>
         </a-form-item>
+        <a-form-item field="refYear" label="Reference Year" row-class="preference-item">
+            <a-radio-group v-model="settings.refYear" default-value="show">
+                <a-radio value="show">
+                    <template #radio="{ checked }">
+                        <a-tag :checked="checked" checkable>
+                            <template #icon v-if="checked">
+                                <icon-check-circle-fill />
+                            </template>
+                            Show
+                        </a-tag>
+                    </template>
+                </a-radio>
+                <a-radio value="hide">
+                    <template #radio="{ checked }">
+                        <a-tag :checked="checked" checkable>
+                            <template #icon v-if="checked">
+                                <icon-check-circle-fill />
+                            </template>
+                            Hide
+                        </a-tag>
+                    </template>
+                </a-radio>
+            </a-radio-group>
+        </a-form-item>
     </a-form>
 </template>
 

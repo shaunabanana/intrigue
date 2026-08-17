@@ -3,7 +3,7 @@
         <span class="title"> {{ title ? title : 'Fetching title...' }}</span>
         <br />
         <span class="authors">
-            {{ year ? year + " | " : '' }}
+            {{ year && (settings.refYear === 'show' || !ready) ? year + " | " : '' }}
             {{ author ? formatAuthors(author) : 'Fetching authors...' }}
         </span>  <br />
         <span

@@ -4,6 +4,7 @@ const STORAGE_KEY = 'intrigue-settings';
 
 const defaultSettings = {
     colorScheme: 'light',
+    refYear: 'show',
     refLink: 'show',
 };
 

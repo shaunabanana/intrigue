@@ -374,7 +374,7 @@ export class EditorWindowManager {
         const parentWindow = BrowserWindow.getFocusedWindow();
         const prefWindow = new BrowserWindow({
             width: 560,
-            height: 150,
+            height: 200,
             title: 'Preferences',
             parent: parentWindow || undefined,
             // modal: Boolean(parentWindow),
